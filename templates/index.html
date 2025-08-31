@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary Meta Tags -->
+    <title>CloudFace AI - AI-Powered Face Recognition & Photo Organization App</title>
+    <meta name="title" content="CloudFace AI - AI-Powered Face Recognition & Photo Organization App">
+    <meta name="description" content="Find anyone in your photos instantly with AI-powered face recognition. Organize photos across Google Drive with privacy-first technology. Upload a selfie and discover every photo of that person.">
+    <meta name="keywords" content="face recognition, AI photo organization, Google Drive photos, photo search, facial recognition software, photo management, AI photo finder, cloud photo organization">
+    <meta name="author" content="CloudFace AI">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+    <meta name="revisit-after" content="7 days">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cloudface-ai.com/">
+    <meta property="og:title" content="CloudFace AI - AI-Powered Face Recognition & Photo Organization App">
+    <meta property="og:description" content="Find anyone in your photos instantly with AI-powered face recognition. Organize photos across Google Drive with privacy-first technology.">
+    <meta property="og:image" content="https://cloudface-ai.com/assets/og-image.jpg">
+    <meta property="og:site_name" content="CloudFace AI">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://cloudface-ai.com/">
+    <meta property="twitter:title" content="CloudFace AI - AI-Powered Face Recognition & Photo Organization App">
+    <meta property="twitter:description" content="Find anyone in your photos instantly with AI-powered face recognition. Organize photos across Google Drive with privacy-first technology.">
+    <meta property="twitter:image" content="https://cloudface-ai.com/assets/twitter-image.jpg">
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="msapplication-TileColor" content="#1a73e8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="CloudFace AI">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://cloudface-ai.com/">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="//www.google-analytics.com">
+    <link rel="dns-prefetch" href="//www.googletagmanager.com">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        /* Modern CSS Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a73e8;
+            --primary-light: #4285f4;
+            --primary-dark: #0d47a1;
+            --accent: #ea4335;
+            --accent-light: #f28b82;
+            --success: #34a853;
+            --warning: #fbbc04;
+            --bg: #fafafa;
+            --surface: #ffffff;
+            --text-primary: #202124;
+            --text-secondary: #5f6368;
+            --text-tertiary: #9aa0a6;
+            --border: #dadce0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-hover: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+            --radius: 16px;
+            --radius-sm: 8px;
+            --transition: none;
+        }
+
+        body {
+            font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            font-size: 16px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header Styles */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .header-top {
+            background: var(--primary);
+            color: white;
+            padding: 4px 0;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .header-top a {
+            color: white;
+            text-decoration: none;
+            margin: 0 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .header-top svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        .header-main {
+            padding: 1px 0;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .logo-icon {
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .logo-icon svg {
+            width: 10px;
+            height: 10px;
+            fill: currentColor;
+        }
+
+        .nav-toggle {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-toggle svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .nav-toggle:hover {
+            background: var(--bg);
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            list-style: none;
+        }
+
+        .nav-menu a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+        }
+
+        .nav-menu a:hover {
+            color: var(--primary);
+            background: var(--bg);
+        }
+
+        .nav-menu a.active {
+            color: var(--primary);
+            background: var(--bg);
+        }
+
+        .nav-menu a.active {
+            color: var(--primary);
+            background: var(--bg);
+        }
+
+        .cta-button {
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.1s ease;
+        }
+
+        .cta-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .header-title {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .header-title h1 {
+            font-size: 2.5rem;
+            font-weight: 400;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .header-title p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
+
+        .section:hover {
+            border-color: var(--primary-light);
+            background: var(--bg);
+        }
+
+        .section h2 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        /* File Upload */
+        .file-upload {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            margin: 1rem 0;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg);
+        }
+
+        .file-upload:hover {
+            border-color: var(--primary);
+            background: rgba(26, 115, 232, 0.05);
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload p {
+            color: var(--text-secondary);
+            margin: 0.5rem 0;
+        }
+
+        /* Form Elements */
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            transition: var(--transition);
+            margin: 0.5rem 0;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 0.5rem 0;
+        }
+
+        label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            margin: 0.5rem 0.25rem;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn:disabled {
+            background: var(--text-tertiary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: var(--shadow);
+        }
+
+        /* Status Messages */
+        .status {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: rgba(52, 168, 83, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(52, 168, 83, 0.3);
+        }
+
+        .status.error {
+            background: rgba(234, 67, 53, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(234, 67, 53, 0.3);
+        }
+
+        .status.info {
+            background: rgba(26, 115, 232, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(26, 115, 232, 0.3);
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .spinner {
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            /* Loading indicator without animation */
+            margin: 0 auto;
+        }
+
+        /* Results */
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .photo-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .photo-card:hover {
+            background: var(--bg);
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .photo-info {
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .photo-info h4 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .photo-info p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Modal/Lightbox styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: var(--radius);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: var(--radius-sm);
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-info h3 {
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+
+        .modal-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        /* Authentication Status styles */
+        .auth-status {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin: 1rem 0;
+            box-shadow: var(--shadow);
+        }
+
+        .auth-status p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .auth-status .btn {
+            margin: 0.5rem 0.25rem;
+        }
+
+        /* Footer Styles */
+        .footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            margin-top: 4rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .footer-section p {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section ul li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer-section ul li a:hover {
+            color: var(--primary);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--bg);
+            border-radius: 50%;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .social-link:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .social-link svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid var(--border);
+            padding: 1.5rem 0;
+        }
+
+        .footer-bottom-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-left p {
+            color: var(--text-tertiary);
+            font-size: 14px;
+            margin: 0 0 0.25rem 0;
+            line-height: 1.4;
+        }
+
+        .footer-left p .heart {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .footer-left p:last-child {
+            margin-bottom: 0;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom p {
+            color: var(--text-tertiary);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .header-title h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .section {
+                padding: 1.5rem;
+            }
+
+            .nav-toggle {
+                display: flex;
+            }
+
+            .nav-menu {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--surface);
+                border-top: 1px solid var(--border);
+                box-shadow: var(--shadow);
+                border-radius: 0 0 var(--radius) var(--radius);
+                flex-direction: column;
+                padding: 1rem 0;
+            }
+
+            .nav-menu.active {
+                display: flex;
+            }
+
+            .nav-menu a {
+                display: block;
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .nav-toggle {
+                display: flex;
+            }
+
+            .footer-bottom-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-title h1 {
+                font-size: 1.75rem;
+            }
+
+            .btn {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+
+        <!-- Structured Data (JSON-LD) for SEO -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "CloudFace AI - Index",
+            "description": "AI-powered face recognition technology for photo organization",
+            "url": "https://cloudface-ai.com/index",
+            "author": {
+                "@type": "Organization",
+                "name": "CloudFace AI",
+                "url": "https://cloudface-ai.com"
+            },
+            "publisher": {
+                "@type": "Organization",
+                "name": "CloudFace AI",
+                "url": "https://cloudface-ai.com"
+            }
+        }
+        </script>
+        
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-top">
+            <a href="tel:+1234567890">
+                <svg viewBox="0 0 24 24">
+                    <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                </svg>
+                +1 (234) 567-890
+            </a>
+            <a href="mailto:info@cloudface-ai.com">
+                <svg viewBox="0 0 24 24">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+                info@cloudface-ai.com
+            </a>
+            <a href="/contact">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                Support
+            </a>
+        </div>
+        <div class="header-main">
+            <div class="container">
+                <div class="header-content">
+                    <a href="/" class="logo">
+                        <div class="logo-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+                            </svg>
+                        </div>
+                        <span>CloudFace AI</span>
+                    </a>
+                    <button class="nav-toggle" onclick="toggleNav()">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                        </svg>
+                    </button>
+                    <nav class="nav-menu" id="navMenu">
+                        <a href="/" class="active">Home</a>
+                        <a href="/about">About</a>
+                        <a href="/blog">Blog</a>
+                        <a href="/contact">Contact</a>
+                        <a href="/#how-it-works">How It Works</a>
+                        <a href="/#features">Features</a>
+                        <a href="/#privacy">Privacy</a>
+                        <a href="/app" class="cta-button">Try App</a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="header-title">
+            <h1>CloudFace AI Engine</h1>
+            <p>Find faces in your photos using advanced AI technology</p>
+        </div>
+
+        <!-- Authentication Status -->
+        <div id="authStatus" class="auth-status">
+            <div id="notAuthenticated" style="display: none;">
+                <div style="text-align: center; padding: 2rem;">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--primary); margin-bottom: 1rem;">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                        <polyline points="10,17 15,12 10,7"/>
+                        <line x1="15" y1="12" x2="3" y2="12"/>
+                    </svg>
+                    <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Welcome to CloudFace AI</h2>
+                    <p style="margin-bottom: 1.5rem; color: var(--text-secondary); font-size: 1.1rem;">
+                        To use our AI-powered face recognition, you need to sign in with your Google account to access your Google Drive photos.
+                    </p>
+                    <button class="btn" onclick="window.location.href='/auth/login'" style="background: var(--primary); font-size: 1.1rem; padding: 1rem 2rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                        Sign in with Google
+                    </button>
+                    <p style="margin-top: 1rem; color: var(--text-tertiary); font-size: 0.9rem;">
+                        Your privacy is protected. We only access photos you explicitly choose to process.
+                    </p>
+                </div>
+            </div>
+            <div id="authenticated" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <p style="margin: 0; color: var(--text-primary); font-weight: 500;">
+                            ✅ Signed in as: <span id="userEmail" style="color: var(--primary);"></span>
+                        </p>
+                        <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.9rem;">
+                            You can now process Google Drive photos and search for faces
+                        </p>
+                    </div>
+                    <button class="btn" onclick="window.location.href='/auth/logout'" style="background: var(--accent);">
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mainContent" class="main-content" style="display: none;">
+            <!-- Left Column: Google Drive Processing -->
+            <div class="section">
+                <h2>Step 1: Process Google Drive Photos</h2>
+                <input type="text" id="driveUrl" placeholder="Enter Google Drive folder URL">
+                <label><input type="checkbox" id="forceReprocess"> Force reprocess all photos</label>
+                <br><br>
+                <button class="btn" onclick="processDriveFolder()">Process Google Drive Photos</button>
+                <div id="processStatus" class="status info" style="display: none;"></div>
+                <div id="processLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Processing photos...</p>
+                </div>
+            </div>
+
+            <!-- Right Column: Selfie Search -->
+            <div class="section">
+                <h2>Step 2: Find a Person</h2>
+                <div class="file-upload" onclick="document.getElementById('selfieFile').click()">
+                    <input type="file" id="selfieFile" accept="image/*" onchange="handleFileSelect(event)">
+                    <p>📷 Click to select a selfie photo</p>
+                    <p>or drag and drop here</p>
+                </div>
+                                 <div id="fileInfo" style="display: none;">
+                     <p><strong>Selected:</strong> <span id="fileName"></span></p>
+                     <p><strong>Size:</strong> <span id="fileSize"></span></p>
+                 </div>
+                 
+                 <!-- Selfie Preview Container -->
+                 <div id="selfiePreviewContainer" style="margin-top: 1rem; text-align: center; display: none;">
+                     <h3>Selected Selfie Preview</h3>
+                     <img id="selfiePreview" src="" alt="Selected Selfie" style="max-width: 100%; height: auto; border-radius: var(--radius-sm);" loading="lazy">
+                 </div>
+                <br>
+                <label>Match Sensitivity: <span id="thresholdValue">80%</span></label>
+                <input type="range" id="thresholdSlider" min="50" max="95" value="80" oninput="updateThreshold(this.value)">
+                <br><br>
+                <button class="btn" id="searchBtn" onclick="searchForPerson()" disabled>Find My Photos</button>
+                <div id="searchStatus" class="status info" style="display: none;"></div>
+                <div id="searchLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Searching...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="section" style="grid-column: 1 / -1; margin-top: 2rem;">
+            <h2>Search Results</h2>
+            <div id="downloadAllContainer" style="text-align: center; margin-bottom: 1rem; display: none;">
+                <button class="btn" onclick="downloadAllPhotos()" style="background: var(--success); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7,10 12,15 17,10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download All as ZIP
+                </button>
+                <p style="color: var(--text-secondary); margin-top: 0.5rem; font-size: 0.9rem;">
+                    Creates a ZIP file with all matched photos for easy download
+                </p>
+            </div>
+            <div id="results" class="results"></div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Modal for enlarged photos -->
+    <div id="photoModal" class="modal" onclick="closeModal()">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage" alt="CloudFace AI" loading="lazy">
+        <div class="modal-info">
+            <h3 id="modalTitle">Photo Details</h3>
+            <p id="modalPath">Path: </p>
+            <p id="modalSimilarity">Similarity: </p>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        
+        // Check authentication status when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+        });
+        
+        function checkAuthStatus() {
+            fetch('/auth/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.authenticated) {
+                        document.getElementById('authenticated').style.display = 'block';
+                        document.getElementById('notAuthenticated').style.display = 'none';
+                        document.getElementById('mainContent').style.display = 'grid';
+                        document.getElementById('userEmail').textContent = data.user.email;
+                    } else {
+                        document.getElementById('authenticated').style.display = 'none';
+                        document.getElementById('notAuthenticated').style.display = 'block';
+                        document.getElementById('mainContent').style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking auth status:', error);
+                    document.getElementById('notAuthenticated').style.display = 'block';
+                    document.getElementById('mainContent').style.display = 'none';
+                });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = formatFileSize(file.size);
+                document.getElementById('fileInfo').style.display = 'block';
+                document.getElementById('searchBtn').disabled = false;
+                
+                // Show success status
+                const status = document.getElementById('searchStatus');
+                status.textContent = `✅ Selected: ${file.name} (${formatFileSize(file.size)})`;
+                status.className = 'status success';
+                status.style.display = 'block';
+                
+                // Use FileReader to read file as data URL and display it
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Get the image and container elements
+                    const previewContainer = document.getElementById('selfiePreviewContainer');
+                    const previewImage = document.getElementById('selfiePreview');
+                    
+                    // Set the image source to the data URL
+                    previewImage.src = e.target.result;
+                    
+                    // Make the preview container visible
+                    previewContainer.style.display = 'block';
+                    
+                    // Store the data URL for later use
+                    selectedFile.dataURL = e.target.result;
+                    
+                    console.log('📁 File read as data URL:', e.target.result.substring(0, 50) + '...');
+                };
+                
+                reader.onerror = function() {
+                    console.error('❌ Error reading file:', reader.error);
+                    const status = document.getElementById('searchStatus');
+                    status.textContent = `❌ Error reading file: ${reader.error}`;
+                    status.className = 'status error';
+                    status.style.display = 'block';
+                };
+                
+                // Read the file as a data URL
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function updateThreshold(value) {
+            document.getElementById('thresholdValue').textContent = value + '%';
+        }
+
+        function processDriveFolder() {
+            const driveUrl = document.getElementById('driveUrl').value;
+            const forceReprocess = document.getElementById('forceReprocess').checked;
+            
+            if (!driveUrl) {
+                showStatus('processStatus', 'Please enter a Google Drive URL', 'error');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('processLoading').style.display = 'block';
+            showStatus('processStatus', 'Processing Google Drive folder...', 'info');
+
+            // Send request to backend
+            fetch('/process_drive', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    drive_url: driveUrl,
+                    force_reprocess: forceReprocess
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('processLoading').style.display = 'none';
+                if (data.success) {
+                    showStatus('processStatus', `✅ Processed ${data.processed_count} photos successfully!`, 'success');
+                } else {
+                    showStatus('processStatus', `❌ Error: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                document.getElementById('processLoading').style.display = 'none';
+                showStatus('processStatus', `❌ Error: ${error.message}`, 'error');
+            });
+        }
+
+        function searchForPerson() {
+            if (!selectedFile) {
+                showStatus('searchStatus', 'Please select a selfie photo first', 'error');
+                return;
+            }
+
+            const threshold = document.getElementById('thresholdSlider').value / 100;
+            
+            console.log('🔍 Starting search with:');
+            console.log('🔍 Selected file:', selectedFile);
+            console.log('🔍 File name:', selectedFile.name);
+            console.log('🔍 File size:', selectedFile.size);
+            console.log('🔍 File type:', selectedFile.type);
+            console.log('🔍 Threshold:', threshold);
+            console.log('🔍 Has dataURL:', !!selectedFile.dataURL);
+            
+            // Show loading
+            document.getElementById('searchLoading').style.display = 'block';
+            showStatus('searchStatus', 'Searching for matches...', 'info');
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('selfie', selectedFile);
+            formData.append('threshold', threshold);
+
+            console.log('🔍 FormData created with:');
+            console.log('🔍 - selfie:', selectedFile);
+            console.log('🔍 - threshold:', threshold);
+
+            // Send request to backend
+            fetch('/search', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('🔍 Raw response:', response);
+                console.log('🔍 Response status:', response.status);
+                console.log('🔍 Response headers:', response.headers);
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('searchLoading').style.display = 'none';
+                console.log('🔍 Search response data:', data);
+                console.log('🔍 Response success:', data.success);
+                console.log('🔍 Matches count:', data.matches ? data.matches.length : 'No matches field');
+                
+                if (data.matches && data.matches.length > 0) {
+                    console.log('🔍 First match sample:', data.matches[0]);
+                    console.log('🔍 All match keys:', data.matches.map(m => Object.keys(m)));
+                }
+                
+                if (data.success) {
+                    showStatus('searchStatus', `✅ Found ${data.matches.length} matches!`, 'success');
+                    displayResults(data.matches);
+                } else {
+                    showStatus('searchStatus', `❌ Error: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                document.getElementById('searchLoading').style.display = 'none';
+                console.error('🔍 Search error:', error);
+                showStatus('searchStatus', `❌ Error: ${error.message}`, 'error');
+            });
+        }
+
+        function displayResults(matches) {
+            const resultsDiv = document.getElementById('results');
+            const downloadAllContainer = document.getElementById('downloadAllContainer');
+            resultsDiv.innerHTML = '';
+            
+            console.log('🔍 Displaying results:', matches);
+            console.log('📁 Results div:', resultsDiv);
+
+            if (!matches || matches.length === 0) {
+                downloadAllContainer.style.display = 'none';
+                resultsDiv.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No matches found</p>';
+                return;
+            }
+            
+            // Show download all button when there are results
+            downloadAllContainer.style.display = 'block';
+
+            matches.forEach((match, index) => {
+                console.log(`📸 Processing match ${index}:`, match);
+                console.log(`📸 Match keys:`, Object.keys(match));
+                console.log(`📸 photo_path:`, match.photo_path);
+                console.log(`📸 photo_name:`, match.photo_name);
+                console.log(`📸 photo_reference:`, match.photo_reference);
+                console.log(`📸 similarity:`, match.similarity);
+                console.log(`📸 similarity_score:`, match.similarity_score);
+                console.log(`📸 similarity_percent:`, match.similarity_percent);
+                
+                const photoCard = document.createElement('div');
+                photoCard.className = 'photo-card';
+                
+                // Use the full photo_path for the photo source to get original files
+                const photoPath = match.photo_path || match.photo_reference || 'unknown.jpg';
+                console.log(`📁 Photo path: ${photoPath}`);
+                console.log(`📁 Photo path type:`, typeof photoPath);
+                console.log(`📁 Photo path length:`, photoPath.length);
+                
+                // Check if path contains forward slashes that might cause issues
+                if (photoPath.includes('/')) {
+                    console.log(`⚠️ WARNING: Path contains forward slashes: ${photoPath}`);
+                    console.log(`⚠️ This might cause file serving issues!`);
+                }
+                
+                // Create the photo card with original file path
+                const photoUrl = `/photo/${encodeURIComponent(photoPath)}`;
+                console.log(`🌐 Photo URL: ${photoUrl}`);
+                console.log(`🌐 Encoded path: ${encodeURIComponent(photoPath)}`);
+                
+                photoCard.innerHTML = `
+                    <img src="${photoUrl}" alt="Match" 
+                         onload="console.log('✅ Image loaded successfully:', '${photoPath}')"
+                         onerror="console.log('❌ Image failed to load:', '${photoPath}', 'URL:', this.src, 'Error details:', event); this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxNTAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg=='"
+                                     style="cursor: pointer;"
+                         onclick="openModal('${photoPath}', '${match.photo_name || 'Unknown'}', ${match.similarity || 0})" loading="lazy">
+                    <div class="photo-info">
+                        <h4>${match.photo_name || 'Unknown'}</h4>
+                        <p>Similarity: ${((match.similarity || 0) * 100).toFixed(1)}%</p>
+                        <button class="btn" onclick="downloadPhoto('${photoPath}')">Download</button>
+                    </div>
+                `;
+                
+                resultsDiv.appendChild(photoCard);
+                console.log(`✅ Added photo card ${index} with path: ${photoPath}`);
+                console.log(`✅ Photo card HTML created successfully`);
+            });
+        }
+
+        function downloadPhoto(photoPath) {
+            // Create download link for original file
+            const link = document.createElement('a');
+            link.href = `/photo/${encodeURIComponent(photoPath)}`;
+            link.download = photoPath.split('/').pop() || 'photo.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function downloadAllPhotos() {
+            const resultsDiv = document.getElementById('results');
+            const photoCards = resultsDiv.querySelectorAll('.photo-card');
+            
+            if (photoCards.length === 0) {
+                showStatus('searchStatus', 'No photos to download', 'error');
+                return;
+            }
+            
+            console.log(`📦 Starting ZIP creation for ${photoCards.length} photos...`);
+            
+            // Show loading status
+            const downloadBtn = document.querySelector('#downloadAllContainer .btn');
+            const originalText = downloadBtn.textContent;
+            downloadBtn.textContent = '⏳ Creating ZIP...';
+            downloadBtn.disabled = true;
+            
+            // Collect all photo paths
+            const photoPaths = [];
+            photoCards.forEach((card) => {
+                const img = card.querySelector('img');
+                const onclickAttr = img.getAttribute('onclick');
+                
+                // Extract photo path from onclick="openModal('PHOTO_PATH', ...)"
+                if (onclickAttr && onclickAttr.includes("openModal('")) {
+                    const startIndex = onclickAttr.indexOf("openModal('") + 11;
+                    const endIndex = onclickAttr.indexOf("'", startIndex);
+                    if (endIndex > startIndex) {
+                        const photoPath = onclickAttr.substring(startIndex, endIndex);
+                        photoPaths.push(photoPath);
+                    }
+                }
+            });
+            
+            if (photoPaths.length === 0) {
+                showStatus('searchStatus', 'No valid photo paths found', 'error');
+                downloadBtn.textContent = originalText;
+                downloadBtn.disabled = false;
+                return;
+            }
+            
+            // Create ZIP file using JSZip
+            const JSZip = window.JSZip;
+            if (!JSZip) {
+                showStatus('searchStatus', 'JSZip library not loaded. Please refresh the page.', 'error');
+                downloadBtn.textContent = originalText;
+                downloadBtn.disabled = false;
+                return;
+            }
+            
+            const zip = new JSZip();
+            let processedCount = 0;
+            let failedCount = 0;
+            
+            // Process each photo and add to ZIP
+            photoPaths.forEach((photoPath, index) => {
+                fetch(`/photo/${encodeURIComponent(photoPath)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        // Get filename from path
+                        const filename = photoPath.split('/').pop() || `photo_${index + 1}.jpg`;
+                        
+                        // Add to ZIP
+                        zip.file(filename, blob);
+                        processedCount++;
+                        console.log(`✅ Added to ZIP: ${filename}`);
+                        
+                        // Check if all photos are processed
+                        if (processedCount + failedCount === photoPaths.length) {
+                            createAndDownloadZip();
+                        }
+                    })
+                    .catch(error => {
+                        failedCount++;
+                        console.error(`❌ Failed to process ${photoPath}:`, error);
+                        
+                        // Check if all photos are processed
+                        if (processedCount + failedCount === photoPaths.length) {
+                            createAndDownloadZip();
+                        }
+                    });
+            });
+            
+            function createAndDownloadZip() {
+                try {
+                    // Generate ZIP file
+                    zip.generateAsync({type: 'blob'})
+                        .then(content => {
+                            // Create download link for ZIP
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(content);
+                            link.download = `matched_photos_${new Date().toISOString().slice(0, 10)}.zip`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            
+                            // Reset button
+                            downloadBtn.textContent = originalText;
+                            downloadBtn.disabled = false;
+                            
+                            const message = `ZIP created with ${processedCount} photos${failedCount > 0 ? `, ${failedCount} failed` : ''}`;
+                            showStatus('searchStatus', message, failedCount > 0 ? 'warning' : 'success');
+                            
+                            console.log(`📦 ZIP creation complete: ${processedCount} successful, ${failedCount} failed`);
+                        })
+                        .catch(error => {
+                            console.error('❌ Failed to create ZIP:', error);
+                            showStatus('searchStatus', 'Failed to create ZIP file', 'error');
+                            downloadBtn.textContent = originalText;
+                            downloadBtn.disabled = false;
+                        });
+                } catch (error) {
+                    console.error('❌ Error in ZIP creation:', error);
+                    showStatus('searchStatus', 'Error creating ZIP file', 'error');
+                    downloadBtn.textContent = originalText;
+                    downloadBtn.disabled = false;
+                }
+            }
+        }
+
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+        }
+
+        // Drag and drop functionality
+        const fileUpload = document.querySelector('.file-upload');
+        
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.style.borderColor = '#007bff';
+        });
+        
+        fileUpload.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            fileUpload.style.borderColor = '#ccc';
+        });
+        
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.style.borderColor = '#ccc';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('selfieFile').files = files;
+                handleFileSelect({ target: { files: files } });
+            }
+        });
+        
+        // Modal functions
+        function openModal(photoPath, photoName, similarity) {
+            const modal = document.getElementById('photoModal');
+            const modalImg = document.getElementById('modalImage');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalPathElement = document.getElementById('modalPath');
+            const modalSimilarity = document.getElementById('modalSimilarity');
+            
+            modalImg.src = `/photo/${encodeURIComponent(photoPath)}`;
+            modalTitle.textContent = photoName;
+            modalPathElement.textContent = `Path: ${photoPath}`;
+            modalSimilarity.textContent = `Similarity: ${(similarity * 100).toFixed(1)}%`;
+            
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById('photoModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+        
+        // Close modal when clicking outside the image
+        window.onclick = function(event) {
+            const modal = document.getElementById('photoModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Mobile navigation toggle
+        function toggleNav() {
+            document.getElementById('navMenu').classList.toggle('active');
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const nav = document.getElementById('navMenu');
+            const toggle = document.querySelector('.nav-toggle');
+            if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+                nav.classList.remove('active');
+            }
+        });
+
+        // Add scroll effect to header
+        window.addEventListener('scroll', function() {
+            const header = document.querySelector('.header');
+            if (window.scrollY > 100) {
+                header.style.background = 'rgba(255, 255, 255, 0.98)';
+            } else {
+                header.style.background = 'rgba(255, 255, 255, 0.95)';
+            }
+        });
+    </script>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About CloudFace AI</h3>
+                    <p>We create AI-powered face recognition technology that helps you discover and organize photos across your digital life. Our focus is on privacy, performance, and beautiful user experience.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="social-link">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="social-link">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="social-link">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#how-it-works">How It Works</a></li>
+                        <li><a href="#privacy">Privacy</a></li>
+                                                 <li><a href="/#features">Pricing</a></li>
+                        <li><a href="/blog">Blog</a></li>
+                        <li><a href="/app">Try App</a></li>
+                        <li><a href="/contact">Contact Us</a></li>
+                    </ul>
+                </div>
+                
+                                 <div class="footer-section">
+                     <h3>Services</h3>
+                     <ul>
+                         <li><a href="/#features">Face Recognition</a></li>
+                         <li><a href="/#features">Photo Organization</a></li>
+                         <li><a href="/#features">Google Drive Integration</a></li>
+                         <li><a href="/#features">AI Processing</a></li>
+                         <li><a href="/contact">Support</a></li>
+                     </ul>
+                 </div>
+                
+                <div class="footer-section">
+                    <h3>Contact Info</h3>
+                    <p>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display: inline; margin-right: 8px;">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        AI Innovation Hub<br>Tech City, TC 12345
+                    </p>
+                    <p>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display: inline; margin-right: 8px;">
+                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        </svg>
+                        +1 (234) 567-890
+                    </p>
+                    <p>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display: inline; margin-right: 8px;">
+                            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                        </svg>
+                        hello@cloudface-ai.com
+                    </p>
+                    <p>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display: inline; margin-right: 8px;">
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
+                            <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                        </svg>
+                        Mon-Fri: 9AM-6PM
+                    </p>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <div class="footer-bottom-content">
+                    <div class="footer-left">
+                        <p>&copy; 2025 cloudface-ai.com. All rights reserved.</p>
+                                                 <p>Made with <span class="heart">❤</span> in Gurugram, India</p>
+                    </div>
+                    <div class="footer-links">
+                        <a href="#privacy">Privacy Policy</a>
+                                                 <a href="/#privacy">Terms & Conditions</a>
+                                                 <a href="/#features">Pricing</a>
+                                                 <a href="/#features">Refund</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
