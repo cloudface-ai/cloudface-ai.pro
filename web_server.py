@@ -15,10 +15,14 @@ from urllib.parse import urlencode, parse_qs, urlparse
 # Import your existing modules
 from flow_controller import process_drive_folder_and_store
 from search_handler import search_for_person
+from progress_endpoint import create_progress_endpoint
 from local_cache import get_cache_stats
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this-in-production'  # Change this in production
+
+# Add progress tracking endpoints
+create_progress_endpoint(app)
 
 # Configuration
 UPLOAD_FOLDER = 'storage/temp/selfies'
@@ -200,35 +204,45 @@ def process_drive():
         user_id = session['user_id']
         access_token = session['access_token']
         
-        print(f"🔍 Processing drive folder for user: {user_id}")
+        print(f"🔍 Starting background processing for user: {user_id}")
         print(f"🔑 Using access token: {access_token[:20]}...")
         
-
+        # Start processing in background thread to avoid Railway timeout
+        import threading
+        from progress_tracker import start_progress, stop_progress, set_status, set_total, increment
         
-        # Call your existing function with real parameters
-        result = process_drive_folder_and_store(
-            user_id=user_id,
-            url=drive_url,
-            access_token=access_token,
-            force_reprocess=force_reprocess
-        )
+        def background_process():
+            try:
+                # Start progress tracking
+                start_progress()
+                
+                result = process_drive_folder_and_store(
+                    user_id=user_id,
+                    url=drive_url,
+                    access_token=access_token,
+                    force_reprocess=force_reprocess
+                )
+                
+                # Stop progress tracking
+                stop_progress()
+                print(f"✅ Background processing completed for user {user_id}")
+            except Exception as e:
+                stop_progress()
+                print(f"❌ Background processing failed for user {user_id}: {e}")
         
-        # Extract processed count from result
-        processed_count = 0
-        if result and hasattr(result, 'get'):
-            processed_count = result.get('embedded_count', 0)
+        # Start background thread
+        thread = threading.Thread(target=background_process, daemon=True)
+        thread.start()
         
-
-        
+        # Return immediately to avoid timeout
         return jsonify({
             'success': True,
-            'processed_count': processed_count,
-            'message': 'Drive folder processed successfully'
+            'message': 'Processing started in background. Check terminal for progress.',
+            'status': 'processing'
         })
         
     except Exception as e:
-        print(f"Error processing drive: {e}")
-
+        print(f"Error starting drive processing: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/search', methods=['POST'])

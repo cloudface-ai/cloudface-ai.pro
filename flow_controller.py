@@ -23,8 +23,13 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 	Validate URL, download all images, compute embeddings for each face, and store in Supabase.
 	Returns summary: { downloaded_count, embedded_count, skipped_count, total_count }
 	"""
+	from progress_tracker import set_status, set_total, increment
+	
 	print(f"🔍 Processing Google Drive URL: {url}")
 	print(f"👤 User ID: {user_id}")
+	
+	# Step 1: Download files
+	set_status('download', 'Starting download...')
 	
 	ok, kind, rid = validate_drive_url(url)
 	if not ok:
@@ -54,6 +59,15 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 		print(f"❌ Unsupported Drive URL type: {kind}")
 		raise FlowError(f"Unsupported Drive URL type: {kind}")
 	
+	# Set total files for download step
+	set_total('download', len(paths))
+	for i in range(len(paths)):
+		increment('download')
+	
+	# Step 2: Processing photos
+	set_status('processing', 'Starting photo processing...')
+	set_total('processing', len(paths))
+	
 	print(f"🔄 Processing {len(paths)} photos for face detection...")
 	embedded = 0
 	skipped = 0
@@ -61,6 +75,8 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 	for i, p in enumerate(paths, 1):
 		photo_ref = os.path.basename(p)
 		print(f"  [{i}/{len(paths)}] Processing: {photo_ref}")
+		set_status('processing', f'Processing photo {i}/{len(paths)}')
+		increment('processing')
 		
 		# Skip macOS system files (._ prefix)
 		if photo_ref.startswith('._'):
@@ -75,11 +91,18 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 			skipped += 1
 			continue
 		
+		# Step 3: Face detection
+		set_status('face_detection', f'Detecting faces in {photo_ref}')
+		
 		# Process the photo for face detection
 		faces = embed_image_file(p)
 		print(f"     Found {len(faces)} faces")
 		
 		if faces:
+			# Step 4: Creating embeddings
+			set_status('embedding', f'Creating embeddings for {len(faces)} faces')
+			set_total('embedding', len(faces))
+			
 			# Save embeddings to both local cache and Supabase
 			for face_idx, face_embedding in enumerate(faces):
 				
@@ -87,9 +110,14 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 				local_cache_path = save_embedding_to_cache(user_id, photo_ref, face_embedding)
 				print(f"     💾 Saved to local cache: {local_cache_path}")
 				
+				# Step 5: Storing in database
+				set_status('storage', f'Storing face {face_idx + 1}/{len(faces)}')
+				
 				# Also save to Supabase for persistence
 				if save_face_embedding(user_id, photo_ref, face_embedding):
 					embedded += 1
+					increment('embedding')
+					increment('storage')
 					print(f"     ✅ Saved face embedding {face_idx + 1} for {photo_ref}")
 				else:
 					print(f"     ❌ Failed to save face embedding {face_idx + 1} for {photo_ref}")
