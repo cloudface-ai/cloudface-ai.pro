@@ -514,6 +514,31 @@
             color: var(--primary);
         }
 
+        /* Fix color contrast for accessibility */
+        .footer p {
+            color: #3c4043 !important; /* Darker color for better contrast */
+        }
+        
+        .footer .text-tertiary,
+        .footer .text-secondary {
+            color: #3c4043 !important;
+        }
+
+        /* Fix CTA button contrast */
+        .cta-button {
+            color: #ffffff !important; /* Ensure white text for maximum contrast */
+            font-weight: 700 !important; /* Make text bolder for better readability */
+        }
+
+        /* Fix footer text contrast */
+        .footer-section p {
+            color: #2d3748 !important; /* Darker color for better contrast */
+        }
+
+        .footer-section ul li a {
+            color: #2d3748 !important; /* Darker color for better contrast */
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .nav-menu {
@@ -606,7 +631,7 @@
                         </div>
                         <span>CloudFace AI</span>
                     </a>
-                    <button class="nav-toggle" onclick="toggleNav()">
+                    <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation menu">
                         <svg viewBox="0 0 24 24">
                             <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
                         </svg>
