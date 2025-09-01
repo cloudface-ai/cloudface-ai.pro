@@ -11,7 +11,7 @@ Pillow==10.0.1
 pillow-heif==0.13.0
 
 # Face recognition (optional - will fallback if not available)
-face_recognition==1.3.0
+# face_recognition==1.3.0  # Commented out for Railway compatibility
 opencv-python==4.8.1.78
 
 # RAW image processing (optional)
@@ -31,3 +31,7 @@ gunicorn==21.2.0
 
 # Optional: For better performance
 psutil==5.9.6
+
+# System dependencies for face recognition (if available)
+cmake==3.27.7
+dlib==19.24.2
