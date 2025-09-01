@@ -214,7 +214,7 @@ def process_drive():
         # Extract processed count from result
         processed_count = 0
         if result and hasattr(result, 'get'):
-            processed_count = result.get('processed_count', 0)
+            processed_count = result.get('embedded_count', 0)
         
         return jsonify({
             'success': True,
