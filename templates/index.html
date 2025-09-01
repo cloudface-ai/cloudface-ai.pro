@@ -430,6 +430,102 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 font-size: 0.9rem;
             }
         }
+
+        /* Inline Progress Bar Styles */
+        .progress-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+        }
+
+        .progress-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .progress-header h3 {
+            margin: 0 0 8px 0;
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .progress-header p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .progress-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+        }
+
+        .progress-step.active {
+            opacity: 1;
+            border-color: var(--primary);
+            background: #f0f7ff;
+            box-shadow: 0 2px 8px rgba(26, 115, 232, 0.1);
+        }
+
+        .progress-step.completed {
+            opacity: 1;
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .step-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            min-width: 24px;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 2px;
+        }
+
+        .step-description {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .step-status {
+            font-size: 16px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .progress-step.active .step-status {
+            animation: pulse 1.5s infinite;
+        }
+
+        .progress-step.completed .step-status {
+            color: #28a745;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
     </style>
 
         <!-- Structured Data (JSON-LD) for SEO -->
@@ -549,6 +645,57 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 <label><input type="checkbox" id="forceReprocess"> Force reprocess all photos</label>
                 <br><br>
                 <button class="btn" onclick="processDriveFolder()">Process Google Drive Photos</button>
+                
+                <!-- Inline Progress Bar -->
+                <div id="progressContainer" class="progress-container" style="display: none;">
+                    <div class="progress-header">
+                        <h3>Processing Your Photos</h3>
+                        <p id="progressSubtitle">Starting...</p>
+                    </div>
+                    <div class="progress-steps">
+                        <div class="progress-step" id="step1">
+                            <div class="step-icon">📁</div>
+                            <div class="step-content">
+                                <div class="step-title">Downloading Photos</div>
+                                <div class="step-description">Getting photos from Google Drive...</div>
+                            </div>
+                            <div class="step-status">⏳</div>
+                        </div>
+                        <div class="progress-step" id="step2">
+                            <div class="step-icon">🔍</div>
+                            <div class="step-content">
+                                <div class="step-title">Detecting Faces</div>
+                                <div class="step-description">Finding faces in your photos...</div>
+                            </div>
+                            <div class="step-status">⏳</div>
+                        </div>
+                        <div class="progress-step" id="step3">
+                            <div class="step-icon">🧠</div>
+                            <div class="step-content">
+                                <div class="step-title">Creating AI Embeddings</div>
+                                <div class="step-description">Generating unique face signatures...</div>
+                            </div>
+                            <div class="step-status">⏳</div>
+                        </div>
+                        <div class="progress-step" id="step4">
+                            <div class="step-icon">💾</div>
+                            <div class="step-content">
+                                <div class="step-title">Saving to Database</div>
+                                <div class="step-description">Storing face data securely...</div>
+                            </div>
+                            <div class="step-status">⏳</div>
+                        </div>
+                        <div class="progress-step" id="step5">
+                            <div class="step-icon">✅</div>
+                            <div class="step-content">
+                                <div class="step-title">Complete!</div>
+                                <div class="step-description">Ready to search for faces!</div>
+                            </div>
+                            <div class="step-status">⏳</div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div id="processStatus" class="status info" style="display: none;"></div>
                 <div id="processLoading" class="loading">
                     <div class="spinner"></div>
@@ -746,14 +893,17 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 if (data.success) {
                     if (data.status === 'processing') {
                         showStatus('processStatus', `🔄 ${data.message}`, 'info');
-                        // Show the beautiful progress bar
-                        ProgressBar.show();
+                        // Show the inline progress bar
+                        showInlineProgressBar();
+                        startProgressTracking();
                     } else {
                         const message = data.message || `✅ Processed ${data.processed_count} photos successfully!`;
                         showStatus('processStatus', `✅ ${message}`, 'success');
+                        hideInlineProgressBar();
                     }
                 } else {
                     showStatus('processStatus', `❌ Error: ${data.error}`, 'error');
+                    hideInlineProgressBar();
                 }
             })
             .catch(error => {
@@ -1033,6 +1183,101 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
             element.textContent = message;
             element.className = `status ${type}`;
             element.style.display = 'block';
+        }
+
+        // Inline Progress Bar Functions
+        function showInlineProgressBar() {
+            const container = document.getElementById('progressContainer');
+            container.style.display = 'block';
+            
+            // Reset all steps
+            for (let i = 1; i <= 5; i++) {
+                const step = document.getElementById(`step${i}`);
+                step.className = 'progress-step';
+                step.querySelector('.step-status').textContent = '⏳';
+            }
+            
+            // Show first step as active
+            const firstStep = document.getElementById('step1');
+            firstStep.classList.add('active');
+            firstStep.querySelector('.step-status').textContent = '🔄';
+            
+            // Update subtitle
+            document.getElementById('progressSubtitle').textContent = 'Starting photo processing...';
+        }
+
+        function hideInlineProgressBar() {
+            const container = document.getElementById('progressContainer');
+            container.style.display = 'none';
+        }
+
+        function updateProgressStep(stepNumber, status, subtitle) {
+            // Mark previous steps as completed
+            for (let i = 1; i < stepNumber; i++) {
+                const step = document.getElementById(`step${i}`);
+                step.classList.remove('active');
+                step.classList.add('completed');
+                step.querySelector('.step-status').textContent = '✅';
+            }
+            
+            // Update current step
+            const currentStep = document.getElementById(`step${stepNumber}`);
+            if (currentStep) {
+                currentStep.classList.remove('completed');
+                currentStep.classList.add('active');
+                
+                if (status === 'completed') {
+                    currentStep.classList.remove('active');
+                    currentStep.classList.add('completed');
+                    currentStep.querySelector('.step-status').textContent = '✅';
+                } else {
+                    currentStep.querySelector('.step-status').textContent = '🔄';
+                }
+            }
+            
+            // Update subtitle
+            if (subtitle) {
+                document.getElementById('progressSubtitle').textContent = subtitle;
+            }
+        }
+
+        function updateInlineProgressFromData(progressData) {
+            // Map step names to step numbers
+            const stepMapping = {
+                'download': 1,
+                'face_detection': 2,
+                'embedding': 3,
+                'database': 4,
+                'complete': 5
+            };
+            
+            // Find the currently active step
+            let currentStep = 1;
+            let currentMessage = 'Starting...';
+            
+            for (const [stepName, stepData] of Object.entries(progressData.steps)) {
+                if (stepData.progress > 0 && stepData.progress < 100) {
+                    currentStep = stepMapping[stepName] || 1;
+                    currentMessage = stepData.message || 'Processing...';
+                    break;
+                } else if (stepData.progress === 100) {
+                    currentStep = Math.max(currentStep, (stepMapping[stepName] || 1) + 1);
+                }
+            }
+            
+            // Update the progress display
+            updateProgressStep(currentStep, 'active', currentMessage);
+            
+            // If overall progress is 100%, mark all steps as completed
+            if (progressData.overall >= 100) {
+                for (let i = 1; i <= 5; i++) {
+                    const step = document.getElementById(`step${i}`);
+                    step.classList.remove('active');
+                    step.classList.add('completed');
+                    step.querySelector('.step-status').textContent = '✅';
+                }
+                document.getElementById('progressSubtitle').textContent = 'All photos processed successfully!';
+            }
         }
 
         // Drag and drop functionality
@@ -1657,14 +1902,8 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
     }
 
     function updateProgressDisplay(progressData) {
-        // Update overall progress
-        document.getElementById('overallPercentage').textContent = `${progressData.overall}%`;
-        document.getElementById('overallProgressBar').style.width = `${progressData.overall}%`;
-        
-        // Update estimated time
-        if (progressData.estimated_time) {
-            document.getElementById('estimatedTime').textContent = progressData.estimated_time;
-        }
+        // Update inline progress bar instead of popup
+        updateInlineProgressFromData(progressData);
         
         // Find the currently active step
         let activeStep = null;
