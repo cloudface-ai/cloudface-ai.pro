@@ -12,6 +12,8 @@ from search_engine import rank_matches_for_user
 from local_cache import embedding_exists_in_cache, load_embedding_from_cache, save_embedding_to_cache
 
 
+
+
 class FlowError(Exception):
 	pass
 
@@ -80,6 +82,7 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 		if faces:
 			# Save embeddings to both local cache and Supabase
 			for face_idx, face_embedding in enumerate(faces):
+				
 				# Save to local cache first for faster access
 				local_cache_path = save_embedding_to_cache(user_id, photo_ref, face_embedding)
 				print(f"     💾 Saved to local cache: {local_cache_path}")
@@ -105,6 +108,14 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 	print(f"   📥 Total files: {result['total_count']}")
 	print(f"   🔄 New embeddings: {result['embedded_count']}")
 	print(f"   ⏭️ Skipped (already processed): {result['skipped_count']}")
+	
+	# Add a message field to indicate if everything was already processed
+	if embedded == 0 and skipped > 0:
+		result["message"] = "Already processed! Upload selfie to find your photo"
+	elif embedded > 0:
+		result["message"] = f"Processed {embedded} new faces successfully!"
+	else:
+		result["message"] = "No faces found in photos"
 	
 	return result
 

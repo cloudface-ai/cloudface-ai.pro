@@ -203,6 +203,8 @@ def process_drive():
         print(f"🔍 Processing drive folder for user: {user_id}")
         print(f"🔑 Using access token: {access_token[:20]}...")
         
+
+        
         # Call your existing function with real parameters
         result = process_drive_folder_and_store(
             user_id=user_id,
@@ -216,6 +218,8 @@ def process_drive():
         if result and hasattr(result, 'get'):
             processed_count = result.get('embedded_count', 0)
         
+
+        
         return jsonify({
             'success': True,
             'processed_count': processed_count,
@@ -224,6 +228,7 @@ def process_drive():
         
     except Exception as e:
         print(f"Error processing drive: {e}")
+
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/search', methods=['POST'])
@@ -410,6 +415,8 @@ def debug_storage():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
 
 @app.route('/find_file/<filename>')
 def find_file(filename):

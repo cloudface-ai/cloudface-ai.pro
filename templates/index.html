@@ -426,6 +426,8 @@
             margin: 0 auto;
         }
 
+
+
         /* Results */
         .results {
             display: grid;
@@ -884,6 +886,8 @@
                     <div class="spinner"></div>
                     <p>Processing photos...</p>
                 </div>
+                
+
             </div>
 
             <!-- Right Column: Selfie Search -->
@@ -907,6 +911,10 @@
                 <br>
                 <label>Match Sensitivity: <span id="thresholdValue">80%</span></label>
                 <input type="range" id="thresholdSlider" min="50" max="95" value="80" oninput="updateThreshold(this.value)">
+                <div style="text-align: center; margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                    Precise ←→ Balanced ←→ Broad<br>
+                    <span style="font-size: 0.8rem;">(30%)</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="font-size: 0.8rem;">(60%)</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="font-size: 0.8rem;">(90%)</span>
+                </div>
                 <br><br>
                 <button class="btn" id="searchBtn" onclick="searchForPerson()" disabled>Find My Photos</button>
                 <div id="searchStatus" class="status info" style="display: none;"></div>
@@ -1038,6 +1046,8 @@
             document.getElementById('thresholdValue').textContent = value + '%';
         }
 
+
+
         function processDriveFolder() {
             const driveUrl = document.getElementById('driveUrl').value;
             const forceReprocess = document.getElementById('forceReprocess').checked;
@@ -1047,7 +1057,7 @@
                 return;
             }
 
-            // Show loading
+            // Start progress tracking
             document.getElementById('processLoading').style.display = 'block';
             showStatus('processStatus', 'Processing Google Drive folder...', 'info');
 
@@ -1066,7 +1076,8 @@
             .then(data => {
                 document.getElementById('processLoading').style.display = 'none';
                 if (data.success) {
-                    showStatus('processStatus', `✅ Processed ${data.processed_count} photos successfully!`, 'success');
+                    const message = data.message || `✅ Processed ${data.processed_count} photos successfully!`;
+                    showStatus('processStatus', `✅ ${message}`, 'success');
                 } else {
                     showStatus('processStatus', `❌ Error: ${data.error}`, 'error');
                 }
