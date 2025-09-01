@@ -223,6 +223,8 @@ def ensure_dirs():
 	os.makedirs(TEMP_DIR, exist_ok=True)
 	os.makedirs(EMBEDDING_CACHE_DIR, exist_ok=True)
 
+# Folder browsing functions temporarily disabled to fix Google Drive processing
+
 # Web stubs (to be enhanced if we add true browser cache integration)
 class InMemoryBlobStore:
 	"""Simple in-memory blob store for web fallback."""

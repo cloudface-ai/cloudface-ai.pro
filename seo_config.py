@@ -71,7 +71,7 @@ STRUCTURED_DATA = {
             "@type": "ContactPoint",
             "telephone": "+1-234-567-890",
             "contactType": "customer service",
-            "email": "info@cloudface-ai.com"
+            "email": "cloudface-ai@outlook.com"
         },
         "sameAs": [
             "https://twitter.com/cloudfaceai",

@@ -87,6 +87,26 @@ def blog():
     """Show the blog page"""
     return render_template('blog.html')
 
+@app.route('/privacy')
+def privacy():
+    """Show the privacy policy page"""
+    return render_template('privacy.html')
+
+@app.route('/refund')
+def refund():
+    """Show the refund policy page"""
+    return render_template('refund.html')
+
+@app.route('/terms')
+def terms():
+    """Show the terms and conditions page"""
+    return render_template('terms.html')
+
+@app.route('/pricing')
+def pricing():
+    """Show the pricing page"""
+    return render_template('pricing.html')
+
 @app.route('/auth/login')
 def google_login():
     """Redirect to Google OAuth"""
@@ -135,7 +155,7 @@ def google_callback():
         print(f"✅ Access token: {tokens['access_token'][:20]}...")
         
         # Redirect back to main page
-        return redirect('/')
+        return redirect('/app')
         
     except Exception as e:
         print(f"❌ OAuth callback error: {e}")
@@ -425,6 +445,8 @@ def find_file(filename):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# Folder browsing functionality temporarily disabled to fix Google Drive processing
 
 if __name__ == '__main__':
     print("🚀 Starting Facetak Web Server with OAuth...")

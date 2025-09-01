@@ -10,6 +10,7 @@ from local_cache import save_bytes_to_cache, get_user_cache_dir, file_exists_in_
 import pillow_heif
 from PIL import Image
 import io
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Try to import rawpy for RAW format support
 try:
@@ -137,26 +138,53 @@ def download_drive_file(user_id: str, folder_id: str, file_id: str, access_token
 
 
 def list_folder_files(folder_id: str, access_token: str) -> List[dict]:
-	"""List files in a Drive folder (images only)."""
-	q = f"'{folder_id}' in parents and trashed=false"
-	fields = "files(id,name,mimeType),nextPageToken"
-	url = f"https://www.googleapis.com/drive/v3/files?q={requests.utils.quote(q)}&fields={fields}&pageSize=1000"
-	files = []
-	page_token = None
-	while True:
-		u = url
-		if page_token:
-			u += f"&pageToken={page_token}"
-		r = requests.get(u, headers=_headers(access_token))
-		r.raise_for_status()
-		data = r.json()
-		for f in data.get("files", []):
-			mt = f.get("mimeType", "")
-			if mt.startswith("image/"):
-				files.append(f)
-		page_token = data.get("nextPageToken")
-		if not page_token:
-			break
+	"""List files in a Drive folder (images only) - recursively searches subfolders."""
+	def search_recursively(current_folder_id: str, depth: int = 0) -> List[dict]:
+		"""Recursively search for image files in folder and all subfolders."""
+		if depth > 10:  # Prevent infinite recursion, max 10 levels deep
+			print(f"⚠️  Reached maximum depth ({depth}) for folder {current_folder_id}")
+			return []
+		
+		all_files = []
+		
+		# Query for both files and folders in current directory
+		q = f"'{current_folder_id}' in parents and trashed=false"
+		fields = "files(id,name,mimeType,parents),nextPageToken"
+		url = f"https://www.googleapis.com/drive/v3/files?q={requests.utils.quote(q)}&fields={fields}&pageSize=1000"
+		
+		page_token = None
+		while True:
+			u = url
+			if page_token:
+				u += f"&pageToken={page_token}"
+			
+			r = requests.get(u, headers=_headers(access_token))
+			r.raise_for_status()
+			data = r.json()
+			
+			for f in data.get("files", []):
+				mt = f.get("mimeType", "")
+				
+				if mt.startswith("image/"):
+					# This is an image file
+					all_files.append(f)
+					print(f"  {'  ' * depth}📷 Found image: {f.get('name', 'Unknown')}")
+				elif mt == "application/vnd.google-apps.folder":
+					# This is a subfolder, search it recursively
+					subfolder_name = f.get('name', 'Unknown')
+					print(f"  {'  ' * depth}📁 Searching subfolder: {subfolder_name}")
+					subfolder_files = search_recursively(f["id"], depth + 1)
+					all_files.extend(subfolder_files)
+			
+			page_token = data.get("nextPageToken")
+			if not page_token:
+				break
+		
+		return all_files
+	
+	print(f"🔍 Starting recursive search in folder {folder_id}...")
+	files = search_recursively(folder_id)
+	print(f"📋 Found {len(files)} total image files (including subfolders)")
 	return files
 
 
@@ -190,15 +218,40 @@ def download_drive_folder(user_id: str, folder_id: str, access_token: str, force
 			paths.append(cached_path)
 			print(f"✅ Using cached: {filename}")
 	
-	# Download new files
-	for i, f in enumerate(new_files, 1):
-		try:
-			print(f"  [{i}/{len(new_files)}] Downloading: {f.get('name', 'Unknown')}")
-			p = download_drive_file(user_id, folder_id, f["id"], access_token, force_redownload)
-			paths.append(p)
-			print(f"     ✅ Downloaded to: {p}")
-		except Exception as e:
-			print(f"     ❌ Failed to download {f.get('name')} ({f.get('id')}): {e}")
+	# Download new files concurrently
+	if new_files:
+		print(f"🚀 Starting concurrent downloads with {min(5, len(new_files))} workers...")
+		
+		def download_single_file(file_info):
+			"""Download a single file - used by ThreadPoolExecutor"""
+			try:
+				filename = file_info.get('name', 'Unknown')
+				file_id = file_info.get('id')
+				print(f"  📥 Downloading: {filename}")
+				p = download_drive_file(user_id, folder_id, file_id, access_token, force_redownload)
+				print(f"     ✅ Downloaded: {filename}")
+				return p, filename, None  # success
+			except Exception as e:
+				print(f"     ❌ Failed to download {file_info.get('name')} ({file_info.get('id')}): {e}")
+				return None, file_info.get('name'), str(e)  # failure
+		
+		# Use ThreadPoolExecutor for concurrent downloads
+		max_workers = min(5, len(new_files))  # Limit to 5 concurrent downloads to avoid rate limits
+		with ThreadPoolExecutor(max_workers=max_workers) as executor:
+			# Submit all download tasks
+			future_to_file = {executor.submit(download_single_file, f): f for f in new_files}
+			
+			# Process completed downloads
+			completed_count = 0
+			for future in as_completed(future_to_file):
+				completed_count += 1
+				file_path, filename, error = future.result()
+				
+				if file_path:
+					paths.append(file_path)
+					print(f"  [{completed_count}/{len(new_files)}] ✅ Completed: {filename}")
+				else:
+					print(f"  [{completed_count}/{len(new_files)}] ❌ Failed: {filename} - {error}")
 	
 	print(f"📥 Folder processing complete: {len(paths)}/{len(files)} files available")
 	return paths
