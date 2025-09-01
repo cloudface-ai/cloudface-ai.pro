@@ -449,9 +449,12 @@ def find_file(filename):
 # Folder browsing functionality temporarily disabled to fix Google Drive processing
 
 if __name__ == '__main__':
+    # Get port from environment variable (for Railway) or use default
+    port = int(os.environ.get('PORT', 8550))
+    
     print("🚀 Starting Facetak Web Server with OAuth...")
     print(f"🔑 OAuth Client ID: {GOOGLE_CLIENT_ID[:20]}...")
     print(f"🌐 Redirect URI: {GOOGLE_REDIRECT_URI}")
-    print("📱 Open http://localhost:8550 in your browser")
+    print(f"📱 Open http://localhost:{port} in your browser")
     print("⚠️  Auto-reload disabled to prevent connection issues during processing")
-    app.run(debug=False, host='0.0.0.0', port=8550)
+    app.run(debug=False, host='0.0.0.0', port=port)
