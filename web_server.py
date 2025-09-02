@@ -134,6 +134,14 @@ def serve_root_logo():
     except Exception as e:
         return jsonify({'error': str(e)}), 404
 
+# Also support the "/root/Cloudface-ai-logo.png" path used in templates
+@app.route('/root/Cloudface-ai-logo.png')
+def serve_root_logo_with_prefix():
+    try:
+        return send_from_directory('.', 'Cloudface-ai-logo.png')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 404
+
 @app.route('/auth/login')
 def google_login():
     """Redirect to Google OAuth"""
