@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use CloudFace AI — Privacy‑First Photo Organization</title>
+    <meta name="description" content="Organize your cloud photos without uploading them. Learn how CloudFace AI processes your Google Drive photos privately by streaming and storing only embedded face data.">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        :root{--primary:#1a73e8;--primary-dark:#0d47a1;--bg:#fafafa;--surface:#fff;--text:#202124;--muted:#5f6368;--border:#dadce0;--radius:16px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.24)}
+        body{font-family:'Google Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text)}
+        .header{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+        .container{max-width:1200px;margin:0 auto;padding:2rem 1rem}
+        .nav-menu{display:flex;gap:1rem;list-style:none}
+        .nav-menu a{color:var(--text);text-decoration:none;font-weight:500;padding:.5rem 1rem;border-radius:8px}
+        .nav-menu a:hover{background:#f4f6f8}
+        .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:2rem;align-items:center}
+        .hero h1{font-size:2.25rem;font-weight:600;margin-bottom:.5rem}
+        .hero p{color:var(--muted);font-size:1.1rem}
+        .hero img{width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow)}
+        .badge{display:inline-block;background:#e8f0fe;color:#1a73e8;font-weight:700;font-size:.8rem;padding:.35rem .6rem;border-radius:999px;margin-bottom:.75rem}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem}
+        .section{margin-top:2rem}
+        .section h2{font-size:1.6rem;margin-bottom:1rem}
+        .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+        .grid .card h3{font-size:1.1rem;margin-bottom:.25rem}
+        .muted{color:var(--muted)}
+        .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;align-items:stretch}
+        .flow .step{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center}
+        .flow .arrow{display:flex;align-items:center;justify-content:center;color:var(--muted)}
+        .cta{display:inline-block;margin-top:1rem;background:var(--primary);color:#fff;text-decoration:none;padding:.8rem 1.2rem;border-radius:10px;font-weight:700}
+        .cta:hover{background:var(--primary-dark)}
+        .use-cases{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+        .faq details{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:.5rem 0}
+        .footer{background:var(--surface);border-top:1px solid var(--border);margin-top:3rem}
+        @media (max-width: 900px){.hero{grid-template-columns:1fr}.grid,.use-cases,.flow{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+    <!-- Header (same structure as index.html) -->
+    <header class="header">
+        <div class="container" style="padding:1rem 1rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
+                <a href="/" class="logo" style="text-decoration:none;color:var(--primary);font-weight:600;display:flex;align-items:center;gap:.5rem">
+                    <img src="/static/static/Cloudface-ai-logo.png" alt="CloudFace AI" style="height:20px;width:auto">
+                    <span>CloudFace AI</span>
+                </a>
+                <nav class="nav-menu">
+                    <a href="/">Home</a>
+                    <a href="/about">About</a>
+                    <a href="/blog">Blog</a>
+                    <a href="/contact">Contact</a>
+                    <a href="/how-it-works" class="active">How It Works</a>
+                    <a href="/app" class="cta">Try App</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <div>
+                <div class="badge">Privacy‑First by Design</div>
+                <h1>Organize Your Cloud Photos Without Giving Up Your Privacy.</h1>
+                <p>Your photos stay in your Google Drive. We just find the faces. CloudFace AI streams photos from your link, extracts embedded face data (numeric vectors), and discards raw files. We store only what’s necessary to help you search.</p>
+                <a href="/app" class="cta">Get Started</a>
+            </div>
+            <img src="/static/img/how-it-works-hero.png" alt="How CloudFace AI works">
+        </section>
+
+        <section class="section">
+            <h2>Your True Competitive Advantage</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>No File Storage</h3>
+                    <p class="muted">Images are streamed from your cloud, processed, and the raw files are discarded.</p>
+                </div>
+                <div class="card">
+                    <h3>Minimal Data Footprint</h3>
+                    <p class="muted">We store only embedded face data — a numerical representation, not the photos.</p>
+                </div>
+                <div class="card">
+                    <h3>Enhanced Trust</h3>
+                    <p class="muted">Privacy‑first design that competitors can’t match because they require uploads.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="how-it-works">
+            <h2>How It Works</h2>
+            <div class="flow">
+                <div class="step">
+                    <h3>User’s Google Drive</h3>
+                    <p class="muted">You provide a Drive link with photos.</p>
+                </div>
+                <div class="arrow">→</div>
+                <div class="step">
+                    <h3>CloudFace AI</h3>
+                    <p class="muted">We access via your link and stream images securely.</p>
+                </div>
+                <div class="arrow">→</div>
+                <div class="step">
+                    <h3>Processing & Matching</h3>
+                    <p class="muted">Faces are embedded; only numeric vectors are retained.</p>
+                </div>
+                <div class="arrow">→</div>
+                <div class="step">
+                    <h3>Results to You</h3>
+                    <p class="muted">We return organized results — your photos never leave your Drive.</p>
+                </div>
+            </div>
+            <p class="muted" style="margin-top:1rem">We do not crawl or scrape the public internet. You remain in control of your data at all times.</p>
+        </section>
+
+        <section class="section">
+            <h2>Why This Beats Upload‑Based Services</h2>
+            <div class="card">
+                <p class="muted">Traditional services ask you to upload photos to their servers (like popular face‑search and gallery tools). CloudFace AI is different: we never require uploads, and we minimize retained data by storing only embedded face vectors.</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Who Benefits Most</h2>
+            <div class="use-cases">
+                <div class="card"><h3>Photographers & Videographers</h3><p class="muted">Quickly sort huge archives living in cloud folders.</p></div>
+                <div class="card"><h3>Event Organizers</h3><p class="muted">Weddings, conferences, parties — filter thousands of images per person.</p></div>
+                <div class="card"><h3>Families</h3><p class="muted">Make sense of shared albums by person — without moving files.</p></div>
+            </div>
+        </section>
+
+        <section class="section faq">
+            <h2>Privacy FAQ</h2>
+            <details><summary><strong>Do you store my photos?</strong></summary><p class="muted">No. We process as a stream and discard raw files. We store only embedded face data for matching.</p></details>
+            <details><summary><strong>What is embedded face data?</strong></summary><p class="muted">A numerical representation of a face, not the actual image. It cannot be used to reconstruct the photo.</p></details>
+            <details><summary><strong>Can I delete my data?</strong></summary><p class="muted">Yes. You can request deletion of your embedded data at any time.</p></details>
+            <details><summary><strong>Do you scrape the web?</strong></summary><p class="muted">No. We never crawl or scrape public internet sources.</p></details>
+        </section>
+
+        <section class="section" style="text-align:center">
+            <a href="/app" class="cta">Try CloudFace AI</a>
+            <p class="muted" style="margin-top:.5rem">Your photos stay in your Google Drive. We just find the faces.</p>
+        </section>
+    </main>
+
+    <!-- Footer (copied structure to match index.html styling closely) -->
+    <footer class="footer">
+        <div class="container">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2rem;margin-bottom:2rem">
+                <div>
+                    <h3>About CloudFace AI</h3>
+                    <p class="muted">Privacy‑first face recognition that organizes cloud photos without uploads.</p>
+                </div>
+                <div>
+                    <h3>Quick Links</h3>
+                    <ul style="list-style:none;padding:0">
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/how-it-works">How It Works</a></li>
+                        <li><a href="/privacy">Privacy Policy</a></li>
+                        <li><a href="/terms">Terms</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Contact</h3>
+                    <p class="muted">cloudface-ai@outlook.com</p>
+                </div>
+            </div>
+            <div style="border-top:1px solid var(--border);padding:1rem 0;color:#6b7280">© 2025 cloudface-ai.com</div>
+        </div>
+    </footer>
+</body>
+</html>
+
+
