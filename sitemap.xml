@@ -36,6 +36,46 @@
         <priority>0.7</priority>
     </url>
 
+    <!-- How It Works Page -->
+    <url>
+        <loc>https://cloudface-ai.com/how-it-works</loc>
+        <lastmod>2025-01-20</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
+    <!-- Pricing Page -->
+    <url>
+        <loc>https://cloudface-ai.com/pricing</loc>
+        <lastmod>2025-01-20</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <!-- Privacy Policy Page -->
+    <url>
+        <loc>https://cloudface-ai.com/privacy</loc>
+        <lastmod>2025-01-20</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+    <!-- Terms Page -->
+    <url>
+        <loc>https://cloudface-ai.com/terms</loc>
+        <lastmod>2025-01-20</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+    <!-- Refund Policy Page -->
+    <url>
+        <loc>https://cloudface-ai.com/refund</loc>
+        <lastmod>2025-01-20</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
     <!-- App Page -->
     <url>
         <loc>https://cloudface-ai.com/app</loc>

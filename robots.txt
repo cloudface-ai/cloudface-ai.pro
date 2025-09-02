@@ -3,7 +3,12 @@ Allow: /
 Allow: /about
 Allow: /blog
 Allow: /contact
+Allow: /how-it-works
 Allow: /app
+Allow: /pricing
+Allow: /privacy
+Allow: /terms
+Allow: /refund
 
 # Disallow admin and private areas
 Disallow: /admin/
