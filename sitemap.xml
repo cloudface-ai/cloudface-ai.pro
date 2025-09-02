@@ -44,28 +44,6 @@
         <priority>0.9</priority>
     </url>
 
-    <!-- Features Section -->
-    <url>
-        <loc>https://cloudface-ai.com/#features</loc>
-        <lastmod>2025-01-20</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-    </url>
-
-    <!-- How It Works Section -->
-    <url>
-        <loc>https://cloudface-ai.com/#how-it-works</loc>
-        <lastmod>2025-01-20</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-    </url>
-
-    <!-- Privacy Section -->
-    <url>
-        <loc>https://cloudface-ai.com/#privacy</loc>
-        <lastmod>2025-01-20</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-    </url>
+    
 
 </urlset>

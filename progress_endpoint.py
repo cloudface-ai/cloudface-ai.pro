@@ -13,7 +13,7 @@ def create_progress_endpoint(app):
     """Add progress endpoint to existing Flask app"""
     
     @app.route('/progress')
-    def get_progress():
+    def get_progress_endpoint():
         """Get current progress data"""
         progress_data = get_progress()
         return jsonify(progress_data)
@@ -22,12 +22,15 @@ def create_progress_endpoint(app):
     def stream_progress():
         """Stream progress updates using Server-Sent Events"""
         def generate():
+            print("🔄 Progress stream started")
             while True:
                 progress_data = get_progress()
+                print(f"📊 Sending progress data: {progress_data['overall']}%")
                 
                 # Check if progress is complete
                 if progress_data['overall'] >= 100:
                     yield f"data: {json.dumps(progress_data)}\n\n"
+                    print("✅ Progress stream completed")
                     break
                 
                 # Send progress data

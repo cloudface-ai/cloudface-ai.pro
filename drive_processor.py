@@ -137,8 +137,22 @@ def download_drive_file(user_id: str, folder_id: str, file_id: str, access_token
 	return save_bytes_to_cache(user_id, folder_id, converted_name, converted_content)
 
 
+def get_folder_name(folder_id: str, access_token: str) -> str:
+	"""Get the name of a folder from its ID"""
+	try:
+		url = f"https://www.googleapis.com/drive/v3/files/{folder_id}"
+		headers = _headers(access_token)
+		response = requests.get(url, headers=headers)
+		response.raise_for_status()
+		folder_data = response.json()
+		return folder_data.get('name', 'Unknown Folder')
+	except Exception as e:
+		print(f"⚠️ Could not get folder name for {folder_id}: {e}")
+		return f"Folder {folder_id}"
+
 def list_folder_files(folder_id: str, access_token: str) -> List[dict]:
 	"""List files in a Drive folder (images only) - recursively searches subfolders."""
+	from progress_tracker import update_folder_info, should_stop_processing
 	def search_recursively(current_folder_id: str, depth: int = 0) -> List[dict]:
 		"""Recursively search for image files in folder and all subfolders."""
 		if depth > 10:  # Prevent infinite recursion, max 10 levels deep
@@ -173,6 +187,10 @@ def list_folder_files(folder_id: str, access_token: str) -> List[dict]:
 					# This is a subfolder, search it recursively
 					subfolder_name = f.get('name', 'Unknown')
 					print(f"  {'  ' * depth}📁 Searching subfolder: {subfolder_name}")
+					
+					# Update progress with real folder name
+					update_folder_info(folder_path=f"Searching subfolder: {subfolder_name}")
+					
 					subfolder_files = search_recursively(f["id"], depth + 1)
 					all_files.extend(subfolder_files)
 			
@@ -182,17 +200,36 @@ def list_folder_files(folder_id: str, access_token: str) -> List[dict]:
 		
 		return all_files
 	
-	print(f"🔍 Starting recursive search in folder {folder_id}...")
+	# Get the main folder name
+	main_folder_name = get_folder_name(folder_id, access_token)
+	print(f"🔍 Starting recursive search in folder: {main_folder_name}")
+	update_folder_info(folder_path=f"Scanning folder: {main_folder_name}")
+	
 	files = search_recursively(folder_id)
 	print(f"📋 Found {len(files)} total image files (including subfolders)")
+	
+	# Update progress with scanning completion
+	update_folder_info(folder_path=f"Scanning complete! Found {len(files)} images")
+	update_folder_info(files_found=len(files), total_files=len(files))
+	
 	return files
 
 
 def download_drive_folder(user_id: str, folder_id: str, access_token: str, force_redownload: bool = False) -> List[str]:
 	"""Download all image files from a Drive folder; returns local paths."""
+	from progress_tracker import update_folder_info, should_stop_processing, set_total, set_status, increment
+	
 	print(f"📂 Listing files in Google Drive folder...")
 	files = list_folder_files(folder_id, access_token)
 	print(f"📋 Found {len(files)} image files in folder")
+	
+	# Update progress to show downloading phase
+	update_folder_info(folder_path=f"Now downloading {len(files)} photos...")
+	try:
+		set_total('download', len(files))
+		set_status('download', f'Starting downloads ({len(files)} files)')
+	except Exception:
+		pass
 	
 	# Check which files are already cached
 	cached_files = []
@@ -217,6 +254,11 @@ def download_drive_folder(user_id: str, folder_id: str, access_token: str, force
 		if cached_path:
 			paths.append(cached_path)
 			print(f"✅ Using cached: {filename}")
+			try:
+				increment('download')
+				set_status('download', f"Preparing ({len(paths)}/{len(files)})")
+			except Exception:
+				pass
 	
 	# Download new files concurrently
 	if new_files:
@@ -244,14 +286,35 @@ def download_drive_folder(user_id: str, folder_id: str, access_token: str, force
 			# Process completed downloads
 			completed_count = 0
 			for future in as_completed(future_to_file):
+				# Check if processing should be stopped
+				if should_stop_processing():
+					print("🛑 Download stopped by user")
+					update_folder_info(folder_path="Download stopped by user")
+					break
+					
 				completed_count += 1
 				file_path, filename, error = future.result()
 				
 				if file_path:
 					paths.append(file_path)
 					print(f"  [{completed_count}/{len(new_files)}] ✅ Completed: {filename}")
+					
+					# Update progress with current download status
+					update_folder_info(folder_path=f"Downloading: {filename} ({completed_count}/{len(new_files)})")
+					try:
+						increment('download')
+						set_status('download', f"Downloading {len(paths)}/{len(files)}")
+					except Exception:
+						pass
 				else:
 					print(f"  [{completed_count}/{len(new_files)}] ❌ Failed: {filename} - {error}")
+		
+		# Update progress with download completion
+		update_folder_info(folder_path=f"Downloaded {len(paths)} photos successfully!")
+		try:
+			set_status('download', f"Downloaded {len(paths)}/{len(files)} files")
+		except Exception:
+			pass
 	
 	print(f"📥 Folder processing complete: {len(paths)}/{len(files)} files available")
 	return paths

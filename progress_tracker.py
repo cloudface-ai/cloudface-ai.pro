@@ -17,6 +17,11 @@ class ProgressTracker:
         self.progress_data = {
             'overall': 0,
             'current_step': 'Initializing...',
+            'folder_info': {
+                'folder_path': 'Scanning Google Drive folder...',
+                'total_files': 0,
+                'files_found': 0
+            },
             'steps': {
                 'download': {'progress': 0, 'status': 'Waiting...', 'total_files': 0, 'processed_files': 0},
                 'processing': {'progress': 0, 'status': 'Waiting...', 'total_photos': 0, 'processed_photos': 0},
@@ -29,13 +34,15 @@ class ProgressTracker:
             'errors': [],
             'warnings': []
         }
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.is_active = False
+        self.should_stop = False
         
     def start_tracking(self):
         """Start progress tracking"""
         with self.lock:
             self.is_active = True
+            self.should_stop = False
             self.progress_data['start_time'] = datetime.now().isoformat()
             self.progress_data['overall'] = 0
             # Reset all steps
@@ -44,6 +51,12 @@ class ProgressTracker:
                 step['status'] = 'Waiting...'
                 step['total_files'] = 0
                 step['processed_files'] = 0
+            # Reset folder info
+            self.progress_data['folder_info'] = {
+                'folder_path': 'Scanning Google Drive folder...',
+                'total_files': 0,
+                'files_found': 0
+            }
             self.progress_data['errors'] = []
             self.progress_data['warnings'] = []
     
@@ -51,14 +64,24 @@ class ProgressTracker:
         """Stop progress tracking"""
         with self.lock:
             self.is_active = False
-            self.progress_data['overall'] = 100
+            self.should_stop = True
+            self.progress_data['overall'] = 0
+            self.progress_data['current_step'] = 'Stopped by user'
+            self.progress_data['folder_info']['folder_path'] = 'Processing stopped by user'
+            
+            # Mark all steps as stopped
             for step in self.progress_data['steps'].values():
-                step['progress'] = 100
-                step['status'] = 'Completed'
+                step['status'] = 'Stopped'
+                step['progress'] = 0
+    
+    def should_stop_processing(self):
+        """Check if processing should be stopped"""
+        with self.lock:
+            return self.should_stop
     
     def update_step(self, step_name: str, **kwargs):
         """Update a specific step's progress"""
-        if not self.is_active:
+        if not self.is_active or self.should_stop:
             return
             
         with self.lock:
@@ -120,6 +143,16 @@ class ProgressTracker:
                 'timestamp': datetime.now().isoformat()
             })
     
+    def update_folder_info(self, folder_path: str = None, total_files: int = None, files_found: int = None):
+        """Update folder information"""
+        with self.lock:
+            if folder_path is not None:
+                self.progress_data['folder_info']['folder_path'] = folder_path
+            if total_files is not None:
+                self.progress_data['folder_info']['total_files'] = total_files
+            if files_found is not None:
+                self.progress_data['folder_info']['files_found'] = files_found
+    
     def _calculate_overall_progress(self):
         """Calculate overall progress across all steps"""
         total_progress = 0
@@ -129,6 +162,23 @@ class ProgressTracker:
             total_progress += step['progress']
         
         self.progress_data['overall'] = min(100, int(total_progress / step_count))
+        
+        # Force update the overall progress display
+        if self.progress_data['overall'] >= 100:
+            self.progress_data['overall'] = 100
+
+    def complete_all_steps(self):
+        """Mark all steps as completed and set overall to 100%"""
+        with self.lock:
+            for step_name, step in self.progress_data['steps'].items():
+                # If totals are known, align processed to totals; otherwise mark fully complete
+                if 'total_files' in step and step['total_files']:
+                    step['processed_files'] = step['total_files']
+                # Compute progress as 100
+                step['progress'] = 100
+                step['status'] = 'Completed'
+            self.progress_data['overall'] = 100
+            self.progress_data['current_step'] = 'Completed'
     
     def get_progress(self) -> Dict[str, Any]:
         """Get current progress data"""
@@ -195,6 +245,14 @@ def get_progress():
     """Get current progress data"""
     return progress_tracker.get_progress()
 
+def stop_tracking():
+    """Stop progress tracking"""
+    progress_tracker.stop_tracking()
+
+def should_stop_processing():
+    """Check if processing should be stopped"""
+    return progress_tracker.should_stop_processing()
+
 def reset_progress():
     """Reset progress data"""
     progress_tracker.reset()
@@ -206,3 +264,7 @@ def add_error(error: str):
 def add_warning(warning: str):
     """Add warning message"""
     progress_tracker.add_warning(warning)
+
+def update_folder_info(folder_path: str = None, total_files: int = None, files_found: int = None):
+    """Update folder information"""
+    progress_tracker.update_folder_info(folder_path, total_files, files_found)

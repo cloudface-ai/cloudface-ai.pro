@@ -23,7 +23,7 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 	Validate URL, download all images, compute embeddings for each face, and store in Supabase.
 	Returns summary: { downloaded_count, embedded_count, skipped_count, total_count }
 	"""
-	from progress_tracker import set_status, set_total, increment
+	from progress_tracker import set_status, set_total, increment, update_folder_info, should_stop_processing
 	
 	print(f"🔍 Processing Google Drive URL: {url}")
 	print(f"👤 User ID: {user_id}")
@@ -44,11 +44,17 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 	
 	print(f"✅ URL validated - Type: {kind}, ID: {rid}")
 	
+	# Update folder information with URL
+	update_folder_info(folder_path=f"Processing Google Drive folder...")
+	
 	paths: List[str] = []
 	if kind == "folder":
 		print(f"📁 Downloading folder contents...")
 		paths = download_drive_folder(user_id, rid, access_token, force_redownload=force_reprocess)
 		print(f"📥 Processed {len(paths)} files")
+		
+		# Update with actual file count
+		update_folder_info(files_found=len(paths), total_files=len(paths))
 	elif kind == "file":
 		print(f"📄 Downloading single file...")
 		# For single files, use the file_id as folder_id to keep them organized
@@ -59,10 +65,7 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 		print(f"❌ Unsupported Drive URL type: {kind}")
 		raise FlowError(f"Unsupported Drive URL type: {kind}")
 	
-	# Set total files for download step
-	set_total('download', len(paths))
-	for i in range(len(paths)):
-		increment('download')
+	# Download step progress is handled inside download_drive_folder
 	
 	# Step 2: Processing photos
 	set_status('processing', 'Starting photo processing...')
@@ -72,16 +75,29 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 	embedded = 0
 	skipped = 0
 	
+	# Update progress to show face embedding phase
+	update_folder_info(folder_path=f"Now processing {len(paths)} photos for face detection...")
+	
 	for i, p in enumerate(paths, 1):
+		# Check if processing should be stopped
+		if should_stop_processing():
+			print("🛑 Processing stopped by user")
+			update_folder_info(folder_path="Processing stopped by user")
+			break
+			
 		photo_ref = os.path.basename(p)
 		print(f"  [{i}/{len(paths)}] Processing: {photo_ref}")
 		set_status('processing', f'Processing photo {i}/{len(paths)}')
-		increment('processing')
+		
+		# Update progress with current file being processed
+		update_folder_info(folder_path=f"Face detection: {photo_ref} ({i}/{len(paths)})")
 		
 		# Skip macOS system files (._ prefix)
 		if photo_ref.startswith('._'):
 			print(f"     ⚠️ Skipping macOS system file: {photo_ref}")
 			skipped += 1
+			# Count this photo as progressed (considered) even if skipped
+			increment('processing')
 			continue
 		
 		# Check if embeddings already exist for this photo
@@ -89,10 +105,14 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 		if not force_reprocess and embedding_exists_in_cache(user_id, p):
 			print(f"     ✅ Embeddings already cached for {photo_ref}")
 			skipped += 1
+			# Count this photo as progressed (considered) even if skipped
+			increment('processing')
 			continue
 		
 		# Step 3: Face detection
 		set_status('face_detection', f'Detecting faces in {photo_ref}')
+		set_total('face_detection', len(paths))
+		increment('face_detection')
 		
 		# Process the photo for face detection
 		faces = embed_image_file(p)
@@ -102,6 +122,7 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 			# Step 4: Creating embeddings
 			set_status('embedding', f'Creating embeddings for {len(faces)} faces')
 			set_total('embedding', len(faces))
+			set_total('storage', len(faces))
 			
 			# Save embeddings to both local cache and Supabase
 			for face_idx, face_embedding in enumerate(faces):
@@ -123,6 +144,8 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 					print(f"     ❌ Failed to save face embedding {face_idx + 1} for {photo_ref}")
 		else:
 			print(f"     ⚠️ No faces detected in {photo_ref}")
+		# Photo completed (processed path with or without faces)
+		increment('processing')
 	
 	total_count = len(paths)
 	result = {
@@ -133,9 +156,19 @@ def process_drive_folder_and_store(user_id: str, url: str, access_token: str, fo
 	}
 	
 	print(f"🎉 Processing complete!")
+	set_status('processing', 'Processing complete')
+	# Ensure all step bars and overall reach 100% for frontend completion
+	try:
+		from progress_tracker import complete_all_steps
+		complete_all_steps()
+	except Exception:
+		pass
 	print(f"   📥 Total files: {result['total_count']}")
 	print(f"   🔄 New embeddings: {result['embedded_count']}")
 	print(f"   ⏭️ Skipped (already processed): {result['skipped_count']}")
+	
+	# Update progress with final completion message
+	update_folder_info(folder_path=f"✅ Processing complete! Found {embedded} faces in {total_count} photos. Now you can upload your selfie!")
 	
 	# Add a message field to indicate if everything was already processed
 	if embedded == 0 and skipped > 0:

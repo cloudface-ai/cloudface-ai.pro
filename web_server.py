@@ -111,6 +111,29 @@ def pricing():
     """Show the pricing page"""
     return render_template('pricing.html')
 
+@app.route('/how-it-works-alt')
+def how_it_works_alt():
+    """Alternate How It Works page"""
+    return render_template('how-it-works-alt.html')
+
+@app.route('/how-it-works-pro')
+def how_it_works_pro():
+    """Pro How It Works page (new design)"""
+    return render_template('how-it-works-pro.html')
+
+@app.route('/how-it-works')
+def how_it_works():
+    """Show the How It Works page"""
+    return render_template('how-it-works.html')
+
+# Serve root logo asset for headers
+@app.route('/Cloudface-ai-logo.png')
+def serve_root_logo():
+    try:
+        return send_from_directory('.', 'Cloudface-ai-logo.png')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 404
+
 @app.route('/auth/login')
 def google_login():
     """Redirect to Google OAuth"""
@@ -209,12 +232,15 @@ def process_drive():
         
         # Start processing in background thread to avoid Railway timeout
         import threading
-        from progress_tracker import start_progress, stop_progress, set_status, set_total, increment
+        from progress_tracker import start_progress, stop_progress, set_status, set_total, increment, update_folder_info
         
         def background_process():
             try:
                 # Start progress tracking
                 start_progress()
+                
+                # Update folder info with the drive URL
+                update_folder_info(folder_path=f"Processing: {drive_url}")
                 
                 result = process_drive_folder_and_store(
                     user_id=user_id,
@@ -223,8 +249,13 @@ def process_drive():
                     force_reprocess=force_reprocess
                 )
                 
-                # Stop progress tracking
-                stop_progress()
+                # Finalize progress for frontend: mark 100% and show completion message
+                try:
+                    from progress_tracker import complete_all_steps
+                    complete_all_steps()
+                    update_folder_info(folder_path="Processing Done — Return to main screen")
+                except Exception:
+                    pass
                 print(f"✅ Background processing completed for user {user_id}")
             except Exception as e:
                 stop_progress()
@@ -244,6 +275,97 @@ def process_drive():
     except Exception as e:
         print(f"Error starting drive processing: {e}")
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/debug_progress', methods=['GET'])
+def debug_progress():
+    """Debug endpoint to check current progress state"""
+    from progress_tracker import get_progress
+    progress_data = get_progress()
+    return jsonify({
+        'success': True,
+        'progress_data': progress_data,
+        'is_active': progress_data.get('overall', 0) > 0
+    })
+
+@app.route('/stop_processing', methods=['POST'])
+def stop_processing():
+    """Stop the current processing operation"""
+    try:
+        from progress_tracker import stop_tracking, update_folder_info
+        
+        print("🛑 Stop processing requested by user")
+        
+        # Stop the progress tracking
+        stop_tracking()
+        
+        # Update progress to show stopped state
+        update_folder_info(folder_path="Processing stopped by user")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Processing stopped successfully'
+        })
+    except Exception as e:
+        print(f"❌ Error stopping processing: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/test_progress', methods=['GET'])
+def test_progress():
+    """Test endpoint to verify progress bar is working"""
+    from progress_tracker import start_progress, update_folder_info, set_status, set_total, increment, stop_progress
+    import threading
+    import time
+    
+    def test_background():
+        try:
+            start_progress()
+            update_folder_info(folder_path="Test Folder: /test/photos", total_files=5, files_found=5)
+            
+            # Simulate processing steps
+            set_status('download', 'Downloading test files...')
+            set_total('download', 5)
+            for i in range(5):
+                increment('download')
+                time.sleep(0.5)
+            
+            set_status('processing', 'Processing test photos...')
+            set_total('processing', 5)
+            for i in range(5):
+                increment('processing')
+                time.sleep(0.5)
+            
+            set_status('face_detection', 'Detecting faces...')
+            set_total('face_detection', 5)
+            for i in range(5):
+                increment('face_detection')
+                time.sleep(0.5)
+            
+            set_status('embedding', 'Creating embeddings...')
+            set_total('embedding', 5)
+            for i in range(5):
+                increment('embedding')
+                time.sleep(0.5)
+            
+            set_status('storage', 'Saving to database...')
+            set_total('storage', 5)
+            for i in range(5):
+                increment('storage')
+                time.sleep(0.5)
+            
+            stop_progress()
+            print("✅ Test progress completed")
+        except Exception as e:
+            stop_progress()
+            print(f"❌ Test progress failed: {e}")
+    
+    # Start test in background
+    thread = threading.Thread(target=test_background, daemon=True)
+    thread.start()
+    
+    return jsonify({'success': True, 'message': 'Test progress started'})
 
 @app.route('/search', methods=['POST'])
 def search():
