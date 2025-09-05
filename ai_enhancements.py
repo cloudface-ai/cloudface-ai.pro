@@ -3,10 +3,17 @@ ai_enhancements.py - AI feature enhancements for face recognition
 Handles age progression, pose invariance, expression robustness, and lighting adaptation
 """
 
-import cv2
 import numpy as np
 from typing import List, Tuple, Optional
 import os
+
+# Try to import OpenCV, fallback gracefully if not available
+try:
+    import cv2
+    _HAS_OPENCV = True
+except ImportError:
+    _HAS_OPENCV = False
+    print("⚠️ OpenCV not available in ai_enhancements, using fallback")
 
 # Try to import advanced libraries
 try:
@@ -355,7 +362,15 @@ def enhance_face_for_recognition(face_image: np.ndarray) -> np.ndarray:
     Enhance face image for better recognition
     This function can be used as a preprocessing step
     """
-    return ai_pipeline.enhance_face_image(face_image)
+    if not _HAS_OPENCV:
+        print("⚠️ OpenCV not available, returning original image")
+        return face_image
+        
+    try:
+        return ai_pipeline.enhance_face_image(face_image)
+    except Exception as e:
+        print(f"⚠️ AI enhancement failed: {e}, returning original image")
+        return face_image
 
 # Test function
 def test_ai_enhancements():

@@ -5,8 +5,15 @@ Integrates advanced face detection with AI enhancements while maintaining compat
 
 from typing import List, Tuple, Optional
 import numpy as np
-import cv2
 import os
+
+# Try to import OpenCV, fallback gracefully if not available
+try:
+    import cv2
+    _HAS_OPENCV = True
+except ImportError:
+    _HAS_OPENCV = False
+    print("⚠️ OpenCV not available, some features may be limited")
 
 # Import our new modules
 try:
@@ -55,6 +62,10 @@ def embed_image_file_enhanced(path: str, use_ai_enhancements: bool = True) -> Li
 
 def _try_with_ai_enhancements(path: str) -> List[np.ndarray]:
     """Try face detection with AI enhancements"""
+    if not _HAS_OPENCV:
+        print("⚠️ OpenCV not available, skipping AI enhancements")
+        return []
+        
     try:
         # Load image
         img = cv2.imread(path)
@@ -115,6 +126,10 @@ def embed_image_bytes_enhanced(data: bytes, use_ai_enhancements: bool = True) ->
         except Exception as e:
             print(f"❌ Bytes fallback failed: {e}")
             return []
+    
+    if not _HAS_OPENCV:
+        print("⚠️ OpenCV not available, falling back to 512D system")
+        return _fallback_512d_embedding_from_bytes(data)
     
     try:
         # Convert bytes to image
@@ -270,6 +285,38 @@ def embed_image_bytes(data: bytes) -> List[np.ndarray]:
 def compare_embeddings(a: np.ndarray, b: np.ndarray) -> float:
     """Backward compatible function - uses enhanced version"""
     return compare_embeddings_enhanced(a, b)
+
+def _fallback_512d_embedding_from_bytes(data: bytes) -> List[np.ndarray]:
+    """
+    Fallback that produces 512D embeddings from bytes
+    """
+    try:
+        from embedding_engine import embed_image_bytes
+        original_embeddings = embed_image_bytes(data)
+        if not original_embeddings:
+            return []
+        
+        # Convert 128D to 512D by padding with zeros
+        converted_embeddings = []
+        for emb in original_embeddings:
+            if len(emb) == 128:
+                # Pad 128D to 512D
+                padded_emb = np.pad(emb, (0, 384), mode='constant', constant_values=0)
+                converted_embeddings.append(padded_emb.astype(np.float32))
+            elif len(emb) == 512:
+                # Already 512D
+                converted_embeddings.append(emb.astype(np.float32))
+            else:
+                # Unknown dimension, skip
+                print(f"⚠️ Unknown embedding dimension: {len(emb)}")
+                continue
+        
+        print(f"✅ Bytes fallback converted {len(converted_embeddings)} embeddings to 512D")
+        return converted_embeddings
+        
+    except Exception as e:
+        print(f"❌ Bytes fallback failed: {e}")
+        return []
 
 def _fallback_512d_embedding(path: str) -> List[np.ndarray]:
     """
