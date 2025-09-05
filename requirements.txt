@@ -19,7 +19,7 @@ rawpy==0.18.1
 
 # Database and storage
 firebase-admin
-firebase==1.2.0
+firebase==4.0.1
 
 # Scientific computing
 numpy==1.24.3
