@@ -5,7 +5,7 @@ search_engine.py - ULTIMATE face matching that DESTROYS Kwikpic
 from typing import List, Dict, Any
 import numpy as np
 import os
-from firebase_store import fetch_embeddings_for_user
+from supabase_store import fetch_embeddings_for_user
 from local_cache import load_embedding_from_cache, list_cached_embeddings
 
 # Try to import ULTIMATE features
@@ -15,9 +15,9 @@ try:
     _HAS_ULTIMATE_FEATURES = True
     print("🔥 ULTIMATE KWIKPIC DESTROYER FEATURES ACTIVE!")
 except ImportError:
-    from enhanced_embedding_engine import compare_embeddings as compare_embeddings_enhanced
+    from embedding_engine import compare_embeddings as compare_embeddings_enhanced
     _HAS_ULTIMATE_FEATURES = False
-    print("⚠️ Using enhanced features fallback")
+    print("⚠️ Using standard features")
 
 def rank_matches_for_user(user_id: str, selfie_embeddings: List[np.ndarray], threshold: float = 0.6) -> List[Dict[str, Any]]:
     """

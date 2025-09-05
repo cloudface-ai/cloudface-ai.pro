@@ -5,8 +5,8 @@ from typing import List, Tuple, Dict, Any
 import os
 
 from drive_processor import validate_drive_url, download_drive_folder, download_drive_file
-from enhanced_embedding_engine import embed_image_file_enhanced as embed_image_file
-from firebase_store import save_face_embedding
+from embedding_engine import embed_image_file
+from supabase_store import save_face_embedding
 from selfie_handler import process_selfies
 from search_engine import rank_matches_for_user
 from local_cache import embedding_exists_in_cache, load_embedding_from_cache, save_embedding_to_cache

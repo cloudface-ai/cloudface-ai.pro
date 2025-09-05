@@ -1,30 +1,30 @@
 """
-search_handler.py - ULTIMATE search handler that DESTROYS Kwikpic
+search_handler.py - Enhanced search handler with improved accuracy
+Maintains compatibility with original system while adding improvements
 """
 
-# Try to import ULTIMATE features
+# Try to import enhanced features
 try:
-    from final_kwikpic_destroyer import final_destroyer
     from enhanced_embedding_engine import embed_image_file_enhanced, compare_embeddings_enhanced
     from search_engine import rank_matches_for_user
-    _HAS_ULTIMATE_FEATURES = True
-    print("🔥 ULTIMATE KWIKPIC DESTROYER FEATURES ACTIVE!")
+    _HAS_ENHANCED_FEATURES = True
+    print("✅ Enhanced search handler features available")
 except ImportError:
     from embedding_engine import embed_image_file, compare_embeddings
     from search_engine import rank_matches_for_user
-    _HAS_ULTIMATE_FEATURES = False
-    print("⚠️ Using standard features")
+    _HAS_ENHANCED_FEATURES = False
+    print("⚠️ Using original search handler features")
 
 def search_for_person(selfie_path, user_id, match_threshold=0.80):
     """
-    ULTIMATE person search that DESTROYS Kwikpic
-    Uses ensemble detection + killer features for maximum accuracy
+    Enhanced person search with improved accuracy
+    Uses advanced face detection and comparison when available
     """
-    print(f"--- 🔥 ULTIMATE SEARCH for person from selfie path: {selfie_path} ---")
-    print(f"   Using {'ULTIMATE' if _HAS_ULTIMATE_FEATURES else 'standard'} features")
+    print(f"--- Starting enhanced search for person from selfie path: {selfie_path} ---")
+    print(f"   Using {'enhanced' if _HAS_ENHANCED_FEATURES else 'original'} features")
 
-    # 1. Generate the ULTIMATE fingerprint for the selfie
-    if _HAS_ULTIMATE_FEATURES:
+    # 1. Generate the fingerprint for the selfie
+    if _HAS_ENHANCED_FEATURES:
         selfie_embeddings = embed_image_file_enhanced(selfie_path, use_ai_enhancements=True)
     else:
         selfie_embeddings = embed_image_file(selfie_path)
@@ -36,7 +36,7 @@ def search_for_person(selfie_path, user_id, match_threshold=0.80):
     # Use the first face found in the selfie for the search
     selfie_fingerprint = selfie_embeddings[0]
     
-    # 2. Use the ULTIMATE Search Engine to find similar faces
+    # 2. Use the enhanced Search Engine to find similar faces
     # Convert similarity threshold to appropriate distance threshold
     if match_threshold >= 0.9:  # 90%+ similarity = very strict
         distance_threshold = 0.35
@@ -59,18 +59,17 @@ def search_for_person(selfie_path, user_id, match_threshold=0.80):
         threshold=distance_threshold
     )
 
-    # 3. Process and return the ULTIMATE results
+    # 3. Process and return the results
     if results:
-        print(f"\n--- 🔥 ULTIMATE RESULTS: {len(results)} Matches! ---")
+        print(f"\n--- ✅ Found {len(results)} Matches! ---")
 
-        # Return ULTIMATE match data including destroyer scores
+        # Return full match data including similarity scores
         matched_results = []
 
         for match in results:
             photo_name = match.get("photo_reference")
             distance_score = match.get("min_distance", 0)
-            ultimate_confidence = match.get("ultimate_confidence", 0)
-            destroyer_score = match.get("kwikpic_destroyer_score", 0)
+            confidence = match.get("confidence", 0)
             
             # Convert distance to similarity properly
             if distance_score <= 0.2:
@@ -84,34 +83,33 @@ def search_for_person(selfie_path, user_id, match_threshold=0.80):
             else:
                 similarity_score = 0.30  # 30% similarity for poor matches
             
-            # Use ULTIMATE confidence if available
-            if ultimate_confidence > 0:
-                similarity_score = max(similarity_score, ultimate_confidence)
+            # Use confidence if available (from enhanced features)
+            if confidence > 0:
+                similarity_score = max(similarity_score, confidence)
             
             similarity_percent = f"{similarity_score * 100:.2f}%"
-            print(f"  - 🔥 ULTIMATE MATCH: {photo_name} (Distance: {distance_score:.4f}, Similarity: {similarity_percent}, Destroyer Score: {destroyer_score:.1f})")
+            print(f"  - Found in: {photo_name} (Distance: {distance_score:.4f}, Similarity: {similarity_percent}, Confidence: {confidence:.3f})")
 
-            # Store ULTIMATE match data
+            # Store full match data
             matched_results.append({
                 "photo_reference": photo_name,
                 "similarity_score": similarity_score,
                 "similarity_percent": similarity_percent,
-                "ultimate_confidence": ultimate_confidence,
-                "kwikpic_destroyer_score": destroyer_score
+                "confidence": confidence
             })
 
         return matched_results
 
     else:
-        print("\n--- ❌ No ULTIMATE matches found in the database. ---")
+        print("\n--- ❌ No matches found in the database. ---")
         return []
 
 if __name__ == '__main__':
-    # Test the ULTIMATE search handler
+    # Test the enhanced search handler
     selfie_file = 'my_selfie.jpg'
     test_user_id = 'user_placeholder_id'
     
-    print("--- 🔥 ULTIMATE SEARCH TEST 🔥 ---")
+    print("--- 🚀 STARTING ENHANCED SEARCH TEST 🚀 ---")
     print(f"Searching with selfie: {selfie_file}\n")
 
     # Test with different thresholds

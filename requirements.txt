@@ -18,7 +18,8 @@ opencv-python==4.8.1.78
 rawpy==0.18.1
 
 # Database and storage
-supabase==1.2.0
+firebase-admin
+firebase==1.2.0
 
 # Scientific computing
 numpy==1.24.3
@@ -31,3 +32,21 @@ gunicorn==21.2.0
 
 # Optional: For better performance
 psutil==5.9.6
+
+# Advanced face recognition improvements (optional - will fallback if not available)
+facenet-pytorch==2.5.3
+torch==2.0.1
+torchvision==0.15.2
+scikit-learn==1.3.0
+albumentations==1.3.1
+
+# KWIKPIC KILLER DEPENDENCIES - Beat 99.9% accuracy!
+retinaface==0.0.13
+mediapipe==0.10.8
+ultralytics==8.0.196
+opencv-contrib-python==4.8.1.78
+
+# InsightFace (TensorRT/ONNX-based RetinaFace alternative)
+insightface==0.7.3
+# CPU runtime (use onnxruntime-gpu if you have NVIDIA GPU drivers/CUDA)
+onnxruntime==1.18.1
