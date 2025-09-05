@@ -12,15 +12,15 @@ import numpy as np
 # Load environment variables from example.env (dev/local)
 load_dotenv('example.env')
 
-# Firebase configuration
+# Firebase configuration from environment variables
 FIREBASE_CONFIG = {
-    "apiKey": "AIzaSyC80YzDXjtO9E6Mhkox-aYWmRQXsWiYJOM",
-    "authDomain": "cloudface-ai.firebaseapp.com",
-    "projectId": "cloudface-ai",
-    "storageBucket": "cloudface-ai.firebasestorage.app",
-    "messagingSenderId": "355929417363",
-    "appId": "1:355929417363:web:c57148e1887b1aa3228f66",
-    "measurementId": "G-Y08XH5V9JT"
+    "apiKey": os.environ.get('FIREBASE_API_KEY'),
+    "authDomain": os.environ.get('FIREBASE_AUTH_DOMAIN'),
+    "projectId": os.environ.get('FIREBASE_PROJECT_ID'),
+    "storageBucket": os.environ.get('FIREBASE_STORAGE_BUCKET'),
+    "messagingSenderId": os.environ.get('FIREBASE_MESSAGING_SENDER_ID'),
+    "appId": os.environ.get('FIREBASE_APP_ID'),
+    "measurementId": os.environ.get('FIREBASE_MEASUREMENT_ID')
 }
 
 # Initialize Firebase Admin SDK using service account credentials
@@ -37,14 +37,18 @@ def initialize_firebase():
             print("✅ Firebase Firestore client ready (existing app)")
             return db
 
-        cred_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
-        if not cred_path or not os.path.isfile(cred_path):
-            raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS not set or file missing")
+        # Check if all required environment variables are present
+        required_vars = ['FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_AUTH_DOMAIN']
+        missing_vars = [var for var in required_vars if not os.environ.get(var)]
+        
+        if missing_vars:
+            raise RuntimeError(f"Missing required Firebase environment variables: {missing_vars}")
 
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
+        # Initialize Firebase Admin SDK with default credentials
+        # This will use the environment variables for authentication
+        firebase_admin.initialize_app()
         db = firestore.client()
-        print("✅ Firebase Firestore client ready (service account)")
+        print("✅ Firebase Firestore client ready (environment variables)")
         return db
 
     except Exception as e:
