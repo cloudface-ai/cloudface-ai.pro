@@ -1,5 +1,0 @@
-[33m3ad12a9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix Railway deployment: Add system dependencies and build configuration for face recognition
-[33m28b5eab[m Add Railway deployment configuration - Procfile, railway.json, runtime.txt, and PORT environment variable support
-[33m8204106[m Fix OAuth redirect and face embedding count reporting - OAuth now redirects to /app after sign-in, frontend shows correct face embedding count instead of photo count
-[33m5e7a1f5[m Initial commit: CloudFace AI - AI-powered photo finder with concurrent downloads, updated email, and OAuth fix
-[33mbacbc21[m Initial commit: CloudFace AI with ML engine (secrets removed)

@@ -37,7 +37,16 @@ def initialize_firebase():
             print("✅ Firebase Firestore client ready (existing app)")
             return db
 
-        # Check if all required environment variables are present
+        # Try to use JSON credentials file first
+        credentials_path = os.path.join('credentials', 'firebase-adminsdk.json')
+        if os.path.exists(credentials_path):
+            cred = credentials.Certificate(credentials_path)
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            print("✅ Firebase Firestore client ready (JSON credentials)")
+            return db
+        
+        # Fallback to environment variables
         required_vars = ['FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_AUTH_DOMAIN']
         missing_vars = [var for var in required_vars if not os.environ.get(var)]
         
@@ -61,8 +70,8 @@ db = initialize_firebase()
 FACES_COLLECTION = 'faces'
 
 
-def save_face_embedding(user_id: str, photo_ref: str, embedding: np.ndarray) -> bool:
-    """Persist a face embedding for a photo reference under a user."""
+def save_face_embedding(user_id: str, photo_ref: str, embedding: np.ndarray, folder_id: str = None) -> bool:
+    """Persist a face embedding for a photo reference under a user with folder isolation."""
     try:
         if db is None:
             print(f"⚠️ No Firebase client; simulate save for {photo_ref}")
@@ -71,12 +80,13 @@ def save_face_embedding(user_id: str, photo_ref: str, embedding: np.ndarray) -> 
         # Convert numpy array to list for Firestore
         embedding_list = embedding.tolist()
         
-        # Create document data
+        # Create document data with folder isolation
         doc_data = {
             'user_id': user_id,
             'photo_reference': photo_ref,
             'face_embedding': embedding_list,
             'embedding_dimension': len(embedding_list),
+            'folder_id': folder_id,  # Add folder_id for isolation
             'created_at': firestore.SERVER_TIMESTAMP
         }
         
@@ -90,15 +100,22 @@ def save_face_embedding(user_id: str, photo_ref: str, embedding: np.ndarray) -> 
         return False
 
 
-def fetch_embeddings_for_user(user_id: str) -> List[Dict[str, Any]]:
-    """Fetch all face records for a user."""
+def fetch_embeddings_for_user(user_id: str, folder_id: str = None) -> List[Dict[str, Any]]:
+    """Fetch face records for a user, optionally filtered by folder_id for isolation."""
     try:
         if db is None:
             print(f"⚠️ No Firebase client; return empty list for {user_id}")
             return []
         
-        # Query Firestore for user's face embeddings
-        docs = db.collection(FACES_COLLECTION).where('user_id', '==', user_id).stream()
+        # Query Firestore for user's face embeddings with optional folder isolation
+        query = db.collection(FACES_COLLECTION).where('user_id', '==', user_id)
+        
+        # Add folder_id filter if specified for folder isolation
+        if folder_id is not None:
+            query = query.where('folder_id', '==', folder_id)
+            print(f"🔍 Filtering embeddings by folder_id: {folder_id}")
+        
+        docs = query.stream()
         
         results = []
         for doc in docs:
@@ -106,7 +123,8 @@ def fetch_embeddings_for_user(user_id: str) -> List[Dict[str, Any]]:
             doc_data['id'] = doc.id  # Add document ID
             results.append(doc_data)
         
-        print(f"✅ Fetched {len(results)} face embeddings for user {user_id}")
+        filter_msg = f" (folder: {folder_id})" if folder_id else " (all folders)"
+        print(f"✅ Fetched {len(results)} face embeddings for user {user_id}{filter_msg}")
         return results
         
     except Exception as e:

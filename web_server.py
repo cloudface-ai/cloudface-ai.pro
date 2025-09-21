@@ -12,17 +12,428 @@ import requests
 from werkzeug.utils import secure_filename
 from urllib.parse import urlencode, parse_qs, urlparse
 
-# Import your existing modules
-from flow_controller import process_drive_folder_and_store
-from search_handler import search_for_person
-from progress_endpoint import create_progress_endpoint
-from local_cache import get_cache_stats
+# Import your existing modules (if they exist)
+try:
+    from flow_controller import process_drive_folder_and_store
+except ImportError:
+    # Use real drive processor instead
+    from real_drive_processor import process_drive_folder_and_store
+
+try:
+    from progress_endpoint import create_progress_endpoint
+except ImportError:
+    create_progress_endpoint = None
+
+try:
+    from local_cache import get_cache_stats
+except ImportError:
+    get_cache_stats = None
+
+# Import real face recognition engine (Phase 1)
+from real_face_recognition_engine import get_real_engine
+
+# Import Firebase store for database integration
+from firebase_store import save_face_embedding, fetch_embeddings_for_user
+
+def record_user_feedback(user_id: str, photo_reference: str, is_correct: bool, 
+                        selfie_path: str = None, similarity_score: float = None) -> bool:
+    """
+    Record user feedback for active learning system
+    
+    Args:
+        user_id: User identifier
+        photo_reference: Path or ID of the photo being rated
+        is_correct: Whether the match was correct (True) or incorrect (False)
+        selfie_path: Path to the selfie used for search
+        similarity_score: Similarity score of the match
+    
+    Returns:
+        bool: True if feedback was recorded successfully
+    """
+    try:
+        import json
+        from datetime import datetime
+        
+        # Create feedback data structure
+        feedback_data = {
+            'user_id': user_id,
+            'photo_reference': photo_reference,
+            'is_correct': is_correct,
+            'selfie_path': selfie_path,
+            'similarity_score': similarity_score,
+            'timestamp': datetime.now().isoformat(),
+            'feedback_type': 'explicit'  # vs 'implicit' for downloads
+        }
+        
+        # Store feedback in JSON file (simple storage for now)
+        feedback_dir = 'storage/feedback'
+        os.makedirs(feedback_dir, exist_ok=True)
+        
+        feedback_file = os.path.join(feedback_dir, f"{user_id}_feedback.json")
+        
+        # Load existing feedback or create new list
+        if os.path.exists(feedback_file):
+            with open(feedback_file, 'r') as f:
+                all_feedback = json.load(f)
+        else:
+            all_feedback = []
+        
+        # Add new feedback
+        all_feedback.append(feedback_data)
+        
+        # Save updated feedback
+        with open(feedback_file, 'w') as f:
+            json.dump(all_feedback, f, indent=2)
+        
+        print(f"📝 Feedback recorded: {user_id} -> {photo_reference} -> {'✅ CORRECT' if is_correct else '❌ INCORRECT'}")
+        
+        # Trigger learning system update
+        update_user_learning_profile(user_id, feedback_data)
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error recording feedback: {e}")
+        return False
+
+def update_user_learning_profile(user_id: str, feedback_data: dict) -> None:
+    """
+    Update user's learning profile based on new feedback
+    
+    Args:
+        user_id: User identifier
+        feedback_data: Feedback data to process
+    """
+    try:
+        import json
+        from datetime import datetime
+        
+        # Load user's learning profile
+        profile_dir = 'storage/learning_profiles'
+        os.makedirs(profile_dir, exist_ok=True)
+        
+        profile_file = os.path.join(profile_dir, f"{user_id}_profile.json")
+        
+        if os.path.exists(profile_file):
+            with open(profile_file, 'r') as f:
+                profile = json.load(f)
+        else:
+            profile = {
+                'user_id': user_id,
+                'total_feedback': 0,
+                'correct_matches': 0,
+                'incorrect_matches': 0,
+                'similarity_threshold': 0.7,  # Default threshold
+                'learning_data': [],
+                'last_updated': datetime.now().isoformat()
+            }
+        
+        # Update profile with new feedback
+        profile['total_feedback'] += 1
+        
+        if feedback_data['is_correct']:
+            profile['correct_matches'] += 1
+        else:
+            profile['incorrect_matches'] += 1
+        
+        # Store learning data
+        profile['learning_data'].append({
+            'similarity_score': feedback_data.get('similarity_score'),
+            'is_correct': feedback_data['is_correct'],
+            'timestamp': feedback_data['timestamp']
+        })
+        
+        # Keep only last 100 learning data points
+        if len(profile['learning_data']) > 100:
+            profile['learning_data'] = profile['learning_data'][-100:]
+        
+        # Calculate new similarity threshold based on feedback
+        profile['similarity_threshold'] = calculate_optimal_threshold(profile['learning_data'])
+        
+        profile['last_updated'] = datetime.now().isoformat()
+        
+        # Save updated profile
+        with open(profile_file, 'w') as f:
+            json.dump(profile, f, indent=2)
+        
+        print(f"🧠 Updated learning profile for {user_id}: threshold={profile['similarity_threshold']:.3f}")
+        
+    except Exception as e:
+        print(f"❌ Error updating learning profile: {e}")
+
+def calculate_optimal_threshold(learning_data: list) -> float:
+    """
+    Calculate optimal similarity threshold based on user feedback
+    
+    Args:
+        learning_data: List of feedback data points
+    
+    Returns:
+        float: Optimal similarity threshold (0.0 to 1.0)
+    """
+    try:
+        if not learning_data:
+            return 0.7  # Default threshold
+        
+        # Separate correct and incorrect matches by similarity score
+        correct_scores = [d['similarity_score'] for d in learning_data 
+                         if d['is_correct'] and d['similarity_score'] is not None]
+        incorrect_scores = [d['similarity_score'] for d in learning_data 
+                           if not d['is_correct'] and d['similarity_score'] is not None]
+        
+        if not correct_scores and not incorrect_scores:
+            return 0.7
+        
+        # Calculate optimal threshold
+        if correct_scores and incorrect_scores:
+            # Find threshold that maximizes correct matches while minimizing incorrect ones
+            min_correct = min(correct_scores)
+            max_incorrect = max(incorrect_scores)
+            
+            # Use midpoint between highest incorrect and lowest correct
+            optimal_threshold = (min_correct + max_incorrect) / 2
+        elif correct_scores:
+            # Only correct matches - use minimum correct score
+            optimal_threshold = min(correct_scores) - 0.05  # Slightly lower for safety
+        else:
+            # Only incorrect matches - use maximum incorrect score + buffer
+            optimal_threshold = max(incorrect_scores) + 0.05
+        
+        # Clamp threshold to reasonable range
+        optimal_threshold = max(0.5, min(0.95, optimal_threshold))
+        
+        return optimal_threshold
+        
+    except Exception as e:
+        print(f"❌ Error calculating optimal threshold: {e}")
+        return 0.7
+
+def record_download_feedback(user_id: str, photo_reference: str, similarity_score: float = None) -> bool:
+    """
+    Record download as positive feedback for learning system
+    
+    Args:
+        user_id: User identifier
+        photo_reference: Path or ID of the downloaded photo
+        similarity_score: Similarity score of the match
+    
+    Returns:
+        bool: True if feedback was recorded successfully
+    """
+    try:
+        import json
+        from datetime import datetime
+        
+        # Create download feedback data
+        download_data = {
+            'user_id': user_id,
+            'photo_reference': photo_reference,
+            'is_correct': True,  # Download = positive feedback
+            'similarity_score': similarity_score,
+            'timestamp': datetime.now().isoformat(),
+            'feedback_type': 'implicit',  # Implicit feedback from download
+            'action': 'download'
+        }
+        
+        # Store in same feedback system
+        feedback_dir = 'storage/feedback'
+        os.makedirs(feedback_dir, exist_ok=True)
+        
+        feedback_file = os.path.join(feedback_dir, f"{user_id}_feedback.json")
+        
+        if os.path.exists(feedback_file):
+            with open(feedback_file, 'r') as f:
+                all_feedback = json.load(f)
+        else:
+            all_feedback = []
+        
+        all_feedback.append(download_data)
+        
+        with open(feedback_file, 'w') as f:
+            json.dump(all_feedback, f, indent=2)
+        
+        print(f"📥 Download feedback recorded: {user_id} -> {photo_reference} -> ✅ POSITIVE")
+        
+        # Update learning profile
+        update_user_learning_profile(user_id, download_data)
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error recording download feedback: {e}")
+        return False
+
+def get_user_learning_stats(user_id: str) -> dict:
+    """
+    Get user's learning statistics and current threshold
+    
+    Args:
+        user_id: User identifier
+    
+    Returns:
+        dict: Learning statistics
+    """
+    try:
+        import json
+        
+        profile_file = os.path.join('storage/learning_profiles', f"{user_id}_profile.json")
+        
+        if os.path.exists(profile_file):
+            with open(profile_file, 'r') as f:
+                profile = json.load(f)
+            
+            # Calculate accuracy
+            total = profile['total_feedback']
+            correct = profile['correct_matches']
+            accuracy = (correct / total * 100) if total > 0 else 0
+            
+            return {
+                'total_feedback': total,
+                'correct_matches': correct,
+                'incorrect_matches': profile['incorrect_matches'],
+                'accuracy_percentage': round(accuracy, 1),
+                'current_threshold': profile['similarity_threshold'],
+                'learning_active': total >= 5,  # Active after 5 feedback points
+                'last_updated': profile['last_updated']
+            }
+        else:
+            return {
+                'total_feedback': 0,
+                'correct_matches': 0,
+                'incorrect_matches': 0,
+                'accuracy_percentage': 0,
+                'current_threshold': 0.7,
+                'learning_active': False,
+                'last_updated': None
+            }
+            
+    except Exception as e:
+        print(f"❌ Error getting learning stats: {e}")
+        return {
+            'total_feedback': 0,
+            'correct_matches': 0,
+            'incorrect_matches': 0,
+            'accuracy_percentage': 0,
+            'current_threshold': 0.7,
+            'learning_active': False,
+            'last_updated': None
+        }
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this-in-production'  # Change this in production
 
-# Add progress tracking endpoints
-create_progress_endpoint(app)
+# Add progress tracking endpoints (if available)
+if create_progress_endpoint:
+    create_progress_endpoint(app)
+else:
+    # Real progress stream endpoint using real progress tracker
+    @app.route('/progress/stream')
+    def real_progress_stream():
+        """Real progress stream using real progress tracker - FIXED VERSION"""
+        from flask import Response
+        import json
+        import time
+        from real_progress_tracker import get_progress
+        
+        def generate():
+            last_progress = None
+            connection_count = 0
+            max_connections = 600  # 10 minutes at 1 second intervals
+            error_count = 0
+            max_errors = 5
+            
+            try:
+                while connection_count < max_connections and error_count < max_errors:
+                    try:
+                        progress_data = get_progress()
+                        
+                        # Validate progress data
+                        if not isinstance(progress_data, dict):
+                            raise ValueError("Invalid progress data format")
+                        
+                        # Always send initial data
+                        if last_progress is None:
+                            safe_data = {
+                                'overall': progress_data.get('overall', 0),
+                                'current_step': progress_data.get('current_step', 'Starting...'),
+                                'folder_info': progress_data.get('folder_info', {}),
+                                'steps': progress_data.get('steps', {}),
+                                'is_active': progress_data.get('is_active', False),
+                                'errors': progress_data.get('errors', [])[-5:],  # Last 5 errors only
+                                'timestamp': time.time()
+                            }
+                            yield f"data: {json.dumps(safe_data)}\n\n"
+                            last_progress = safe_data.copy()
+                            connection_count += 1
+                            time.sleep(1)
+                            continue
+                        
+                        # Only send if progress has changed significantly
+                        current_overall = progress_data.get('overall', 0)
+                        last_overall = last_progress.get('overall', 0)
+                        
+                        if (current_overall != last_overall or 
+                            progress_data.get('current_step') != last_progress.get('current_step') or
+                            connection_count % 10 == 0):  # Send heartbeat every 10 seconds
+                            
+                            safe_data = {
+                                'overall': current_overall,
+                                'current_step': progress_data.get('current_step', 'Processing...'),
+                                'folder_info': progress_data.get('folder_info', {}),
+                                'steps': progress_data.get('steps', {}),
+                                'is_active': progress_data.get('is_active', False),
+                                'errors': progress_data.get('errors', [])[-5:],  # Last 5 errors only
+                                'timestamp': time.time()
+                            }
+                            yield f"data: {json.dumps(safe_data)}\n\n"
+                            last_progress = safe_data.copy()
+                        
+                        # Check if processing is complete
+                        if current_overall >= 100:
+                            yield f"data: {json.dumps({'close': True, 'complete': True})}\n\n"
+                            break
+                        
+                        # Check if processing is active
+                        if progress_data.get('is_active', False):
+                            time.sleep(0.5)  # Update every 500ms when active
+                        else:
+                            time.sleep(1)  # Update every 1 second when idle
+                        
+                        connection_count += 1
+                        error_count = 0  # Reset error count on successful iteration
+                        
+                    except Exception as e:
+                        error_count += 1
+                        print(f"❌ Progress stream error (attempt {error_count}): {e}")
+                        
+                        # Send error to client
+                        error_data = {
+                            'error': str(e),
+                            'error_count': error_count,
+                            'timestamp': time.time()
+                        }
+                        yield f"data: {json.dumps(error_data)}\n\n"
+                        
+                        if error_count >= max_errors:
+                            print(f"❌ Too many errors, closing stream")
+                            break
+                        
+                        time.sleep(2)  # Wait before retry
+                
+                # Send final close message
+                yield f"data: {json.dumps({'close': True, 'reason': 'timeout' if connection_count >= max_connections else 'errors'})}\n\n"
+                
+            except Exception as e:
+                print(f"❌ Fatal progress stream error: {e}")
+                yield f"data: {json.dumps({'error': f'Fatal error: {str(e)}', 'close': True})}\n\n"
+        
+        response = Response(generate(), mimetype='text/event-stream')
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Connection'] = 'keep-alive'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Cache-Control'
+        response.headers['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+        return response
 
 # Configuration
 UPLOAD_FOLDER = 'storage/temp/selfies'
@@ -47,12 +458,169 @@ GOOGLE_SCOPES = [
 # Ensure upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Initialize Facial Recognition Pipeline V2
+print("🚀 Initializing Facial Recognition Pipeline V2...")
+try:
+    real_engine = get_real_engine()
+    print("✅ Real Face Recognition Engine initialized successfully")
+    print(f"📊 Engine stats: {real_engine.get_stats()}")
+except Exception as e:
+    print(f"❌ Failed to initialize Real Face Recognition Engine: {e}")
+    real_engine = None
+
+def add_to_database(image_path: str, user_id: str, photo_reference: str) -> dict:
+    """
+    Add a face to the database using the V2 pipeline and Supabase.
+    This function bridges the V2 pipeline with the existing database system.
+    """
+    try:
+        import cv2
+        import numpy as np
+        
+        # Load image
+        image = cv2.imread(image_path)
+        if image is None:
+            return {'success': False, 'error': 'Could not load image'}
+        
+        # Process with real face recognition to get embeddings
+        faces = real_engine.detect_and_embed_faces(image)
+        if not faces:
+            return {'success': False, 'error': 'No face detected'}
+        result = {'success': True, 'embeddings': [{'embedding': faces[0]['embedding']}]}
+        
+        if not result.get('success', False):
+            return {'success': False, 'error': 'Face processing failed'}
+        
+        # Get the first embedding (assuming single face per image)
+        embeddings = result.get('embeddings', [])
+        if not embeddings:
+            return {'success': False, 'error': 'No face embeddings generated'}
+        
+        # Use the first embedding
+        embedding = embeddings[0]['embedding']
+        
+        # Convert to numpy array if it's a list
+        if isinstance(embedding, list):
+            embedding = np.array(embedding)
+        
+        # Save to Firebase using existing Firebase store
+        success = save_face_embedding(user_id, photo_reference, embedding)
+        
+        if success:
+            return {'success': True, 'message': f'Successfully added {photo_reference}'}
+        else:
+            return {'success': False, 'error': 'Failed to save to database'}
+            
+    except Exception as e:
+        return {'success': False, 'error': f'Database error: {str(e)}'}
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def _find_photo_by_file_id(user_id, file_id):
+    """Find photo filename by Google Drive file ID in cache folders"""
+    try:
+        print(f"🔧 DEBUG: _find_photo_by_file_id called with user_id: {user_id}, file_id: {file_id}")
+        
+        # Get current folder_id from session to know which cache folder to search
+        current_folder_id = session.get('current_folder_id')
+        if not current_folder_id:
+            print(f"❌ DEBUG: No current_folder_id in session")
+            return None
+        
+        # Look in the cache folder for this specific Drive folder
+        cache_folder = os.path.join('storage', 'downloads', f"{user_id}_{current_folder_id}")
+        print(f"🔧 DEBUG: Searching in cache folder: {cache_folder}")
+        
+        if not os.path.exists(cache_folder):
+            print(f"❌ DEBUG: Cache folder does not exist: {cache_folder}")
+            return None
+        
+        # First, try to use the mapping file
+        mapping_file = os.path.join(cache_folder, 'file_id_mapping.json')
+        if os.path.exists(mapping_file):
+            try:
+                import json
+                with open(mapping_file, 'r') as f:
+                    file_mapping = json.load(f)
+                if file_id in file_mapping:
+                    filename = file_mapping[file_id]
+                    file_path = os.path.join(cache_folder, filename)
+                    if os.path.exists(file_path):
+                        print(f"✅ Found photo by mapping file lookup: {filename}")
+                        return filename
+            except Exception as e:
+                print(f"⚠️  Could not read mapping file: {e}")
+        
+        # Fallback: scan cache folder directly
+        print(f"🔍 Scanning cache folder directly: {cache_folder}")
+        for filename in os.listdir(cache_folder):
+            if filename.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp')):
+                # Check if the file_id is in the filename
+                if file_id in filename or f"{user_id}_{file_id}" in filename:
+                    print(f"✅ Found photo by direct scan: {filename}")
+                    return filename
+        
+        print(f"❌ DEBUG: Photo not found for file_id: {file_id} in cache folder: {cache_folder}")
+        return None
+    except Exception as e:
+        print(f"❌ DEBUG: Error finding photo by file ID: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+def refresh_access_token():
+    """Refresh the access token using the refresh token"""
+    try:
+        if 'refresh_token' not in session:
+            return False
+        
+        token_data = {
+            'client_id': GOOGLE_CLIENT_ID,
+            'client_secret': GOOGLE_CLIENT_SECRET,
+            'refresh_token': session['refresh_token'],
+            'grant_type': 'refresh_token'
+        }
+        
+        response = requests.post(GOOGLE_TOKEN_URL, data=token_data)
+        if response.status_code == 200:
+            tokens = response.json()
+            session['access_token'] = tokens['access_token']
+            print(f"✅ Access token refreshed successfully")
+            return True
+        else:
+            print(f"❌ Token refresh failed: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error refreshing token: {e}")
+        return False
 
 def is_authenticated():
     """Check if user is authenticated and has valid tokens"""
     return 'access_token' in session and 'user_info' in session
+
+def get_valid_access_token():
+    """Get a valid access token, refreshing if necessary"""
+    if not is_authenticated():
+        return None
+    
+    # Try to use current token first
+    access_token = session['access_token']
+    
+    # Test the token with a simple API call
+    try:
+        headers = {'Authorization': f'Bearer {access_token}'}
+        response = requests.get('https://www.googleapis.com/oauth2/v1/userinfo', headers=headers)
+        if response.status_code == 200:
+            return access_token
+    except:
+        pass
+    
+    # If token is invalid, try to refresh it
+    if refresh_access_token():
+        return session['access_token']
+    
+    return None
 
 def get_google_auth_url():
     """Generate Google OAuth URL"""
@@ -88,8 +656,68 @@ def about():
 
 @app.route('/blog')
 def blog():
-    """Show the blog page"""
+    """Show the blog page with all articles"""
     return render_template('blog.html')
+
+@app.route('/blog/fortune-500-photo-software')
+def blog_fortune_500():
+    """Fortune 500 Photo Software Guide"""
+    return render_template('blog/fortune-500-photo-software.html')
+
+@app.route('/blog/coca-cola-photo-management')
+def blog_coca_cola():
+    """Coca-Cola Photo Management Case Study"""
+    return render_template('blog/coca-cola-photo-management.html')
+
+@app.route('/blog/nike-photo-organization')
+def blog_nike():
+    """Nike Photo Organization Secrets"""
+    return render_template('blog/nike-photo-organization.html')
+
+@app.route('/blog/red-bull-formula1-photography')
+def blog_red_bull():
+    """Red Bull Formula 1 Photography Technology"""
+    return render_template('blog/red-bull-formula1-photography.html')
+
+@app.route('/blog/spotify-music-events')
+def blog_spotify():
+    """Spotify Music Event Photo Organization"""
+    return render_template('blog/spotify-music-events.html')
+
+@app.route('/blog/professional-photographers-cloudface-ai')
+def blog_professional_photographers():
+    """Professional Wedding & Travel Photographers Guide"""
+    return render_template('blog/professional-photographers-cloudface-ai.html')
+
+@app.route('/blog/government-transportation-live-tracking')
+def blog_government_transportation():
+    """Government Transportation Live Tracking Systems"""
+    return render_template('blog/government-transportation-live-tracking.html')
+
+@app.route('/blog/worlds-first-privacy-face-recognition')
+def blog_privacy_protection():
+    """World's First Privacy-Protecting Face Recognition"""
+    return render_template('blog/worlds-first-privacy-face-recognition.html')
+
+@app.route('/blog/gdpr-face-recognition-privacy-compliance')
+def blog_gdpr_compliance():
+    """GDPR Compliant Face Recognition Privacy"""
+    return render_template('blog/gdpr-face-recognition-privacy-compliance.html')
+
+@app.route('/blog/privacy-destruction-major-apps-facebook-instagram')
+def blog_privacy_destruction():
+    """How Major Apps Destroy Privacy - Facebook Instagram Expose"""
+    return render_template('blog/privacy-destruction-major-apps-facebook-instagram.html')
+
+@app.route('/blog/india-privacy-laws-international-human-rights')
+def blog_india_privacy_laws():
+    """India Privacy Laws and International Human Rights Guide"""
+    return render_template('blog/india-privacy-laws-international-human-rights.html')
+
+@app.route('/blog/privacy-experts-expose-big-tech-surveillance')
+def blog_privacy_experts():
+    """Privacy Experts Expose Big Tech Surveillance - Expert Quotes"""
+    return render_template('blog/privacy-experts-expose-big-tech-surveillance.html')
 
 @app.route('/privacy')
 def privacy():
@@ -108,8 +736,37 @@ def terms():
 
 @app.route('/pricing')
 def pricing():
-    """Show the pricing page"""
-    return render_template('pricing.html')
+    """Show the pricing page with dynamic plans"""
+    try:
+        from pricing_manager import pricing_manager
+        
+        # Detect user location for currency (default to INR)
+        user_location = request.headers.get('CF-IPCountry', 'IN')  # Cloudflare header
+        currency = 'inr' if user_location == 'IN' else 'usd'
+        
+        # Get all plans
+        plans = pricing_manager.get_all_plans(currency)
+        
+        # Get user's current plan if authenticated
+        current_plan = None
+        if 'user_id' in session:
+            user_plan_data = pricing_manager.get_user_plan(session['user_id'])
+            current_plan = user_plan_data.get('plan_type', 'free')
+        
+        return render_template('pricing-new.html', 
+                             plans=plans,
+                             currency=currency,
+                             current_plan=current_plan)
+        
+    except Exception as e:
+        print(f"❌ Error loading pricing: {e}")
+        import traceback
+        traceback.print_exc()
+        # Fallback to static pricing page with default values
+        return render_template('pricing-new.html', 
+                             plans={}, 
+                             currency='inr', 
+                             current_plan='free')
 
 @app.route('/how-it-works-alt')
 def how_it_works_alt():
@@ -125,6 +782,272 @@ def how_it_works_pro():
 def how_it_works():
     """Show the How It Works page"""
     return render_template('how-it-works.html')
+
+@app.route('/my-photos')
+def my_photos():
+    """Show My Photos dashboard with folder-wise organization"""
+    try:
+        # Check authentication
+        if 'user_id' not in session:
+            return redirect('/auth/login')
+        
+        user_id = session['user_id']
+        
+        # Get cache statistics from search cache manager
+        from search_cache_manager import cache_manager
+        cache_stats = cache_manager.get_cache_stats(user_id)
+        
+        # My Photos should only show search results, not all processed photos
+        # The cache_stats already contains the search results from search_cache_manager
+        cache_stats['processed_photos'] = 0  # Don't show processed photos count
+        cache_stats['has_processed_photos'] = False  # Don't show processed photos state
+        
+        # Get user info for display
+        user_info = {
+            'name': session.get('user_name', 'User'),
+            'email': session.get('user_email', user_id),
+            'profile_pic': session.get('user_profile_pic', '')
+        }
+        
+        return render_template('my-photos.html', 
+                             cache_stats=cache_stats,
+                             user_info=user_info)
+        
+    except Exception as e:
+        print(f"❌ Error loading My Photos: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template('my-photos.html', 
+                             cache_stats={'error': str(e)},
+                             user_info={'name': 'User', 'email': 'unknown', 'profile_pic': ''})
+
+@app.route('/my-photos/folder/<folder_id>')
+def view_folder_photos(folder_id):
+    """View all photos from a specific folder"""
+    try:
+        # Check authentication
+        if 'user_id' not in session:
+            return redirect('/auth/login')
+        
+        user_id = session['user_id']
+        
+        # Get cached results for this folder
+        from search_cache_manager import cache_manager
+        cached_results = cache_manager.get_cached_results(user_id, folder_id)
+        
+        if not cached_results:
+            return render_template('folder-photos.html', 
+                                 error="No cached results found for this folder",
+                                 folder_id=folder_id)
+        
+        # Extract matches from cached results
+        matches = cached_results.get('search_results', {}).get('matches', [])
+        
+        # Get folder info
+        folder_info = {
+            'id': folder_id,
+            'match_count': len(matches),
+            'cached_at': cached_results.get('cached_at', 'Unknown'),
+            'name': f"Folder {folder_id[:8]}..."  # Shortened folder ID
+        }
+        
+        return render_template('folder-photos.html',
+                             matches=matches,
+                             folder_info=folder_info)
+        
+    except Exception as e:
+        print(f"❌ Error loading folder photos: {e}")
+        return render_template('folder-photos.html',
+                             error=str(e),
+                             folder_id=folder_id)
+
+@app.route('/api/clear-cache/<folder_id>', methods=['POST'])
+def clear_folder_cache(folder_id):
+    """Clear cache for a specific folder"""
+    try:
+        # Check authentication
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not authenticated'})
+        
+        user_id = session['user_id']
+        
+        # Clear the cache
+        from search_cache_manager import cache_manager
+        success = cache_manager.clear_cache(user_id, folder_id)
+        
+        if success:
+            return jsonify({'success': True, 'message': f'Cache cleared for folder {folder_id}'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to clear cache'})
+            
+    except Exception as e:
+        print(f"❌ Error clearing cache: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/payment/checkout')
+def payment_checkout():
+    """Payment checkout page"""
+    try:
+        # Check authentication
+        if 'user_id' not in session:
+            return redirect('/auth/login')
+        
+        plan_id = request.args.get('plan', 'standard')
+        currency = request.args.get('currency', 'inr')
+        
+        from pricing_manager import pricing_manager
+        from payment_gateway import payment_gateway
+        
+        # Get plan details
+        plans = pricing_manager.get_all_plans(currency)
+        selected_plan = plans.get(plan_id)
+        
+        if not selected_plan:
+            return redirect('/pricing')
+        
+        # Get payment methods
+        payment_methods = payment_gateway.get_payment_methods('IN' if currency == 'inr' else 'US')
+        
+        return render_template('checkout.html',
+                             plan=selected_plan,
+                             plan_id=plan_id,
+                             currency=currency,
+                             payment_methods=payment_methods,
+                             user_id=session['user_id'])
+        
+    except Exception as e:
+        print(f"❌ Error loading checkout: {e}")
+        return redirect('/pricing')
+
+@app.route('/api/usage-stats')
+def get_usage_stats():
+    """Get user's current usage statistics"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        from pricing_manager import pricing_manager
+        stats = pricing_manager.get_usage_stats(session['user_id'])
+        
+        return jsonify({'success': True, 'stats': stats})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/admin/make-pro')
+def admin_make_pro():
+    """Admin endpoint to make current user Pro (for testing)"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        user_id = session['user_id']
+        
+        from pricing_manager import pricing_manager
+        success = pricing_manager.make_user_pro(user_id)
+        
+        if success:
+            return jsonify({
+                'success': True, 
+                'message': f'✅ User {user_id} upgraded to Pro plan!',
+                'plan': 'Pro',
+                'image_limit': 50000,
+                'expires': '1 year from now'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to upgrade user'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/create-payment', methods=['POST'])
+def create_payment():
+    """Create payment order"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        data = request.get_json()
+        plan_id = data.get('plan_id')
+        currency = data.get('currency', 'inr')
+        
+        from pricing_manager import pricing_manager
+        from payment_gateway import payment_gateway
+        
+        # Get plan details
+        plans = pricing_manager.get_all_plans(currency)
+        plan = plans.get(plan_id)
+        
+        if not plan:
+            return jsonify({'success': False, 'error': 'Invalid plan'})
+        
+        # Create payment order
+        if currency == 'inr':
+            result = payment_gateway.create_razorpay_order(
+                plan['price'], plan['name'], session['user_id']
+            )
+        else:
+            result = payment_gateway.create_paypal_order(
+                plan['price'], plan['name'], session['user_id']
+            )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/verify-payment', methods=['POST'])
+def verify_payment():
+    """Verify and process successful payment"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        data = request.get_json()
+        payment_method = data.get('method', 'razorpay')
+        
+        from pricing_manager import pricing_manager
+        from payment_gateway import payment_gateway
+        
+        # Verify payment
+        if payment_method == 'razorpay':
+            verification = payment_gateway.verify_razorpay_payment(data)
+        else:
+            verification = payment_gateway.verify_paypal_payment(data)
+        
+        if verification['success']:
+            # Upgrade user plan
+            plan_id = data.get('plan_id')
+            payment_info = {
+                'amount': data.get('amount', 0),
+                'currency': data.get('currency', 'INR'),
+                'payment_id': verification['payment_id'],
+                'method': payment_method
+            }
+            
+            upgrade_success = pricing_manager.upgrade_user_plan(
+                session['user_id'], plan_id, payment_info
+            )
+            
+            if upgrade_success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Payment successful! Your plan has been upgraded.',
+                    'redirect': '/app'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Payment verified but plan upgrade failed. Please contact support.'
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'error': verification.get('error', 'Payment verification failed')
+            })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 # Serve root logo asset for headers
 @app.route('/Cloudface-ai-logo.png')
@@ -216,6 +1139,102 @@ def auth_status():
             'login_url': '/auth/login'
         })
 
+@app.route('/auth/refresh')
+def refresh_token():
+    """Manually refresh access token"""
+    try:
+        if refresh_access_token():
+            return jsonify({
+                'success': True,
+                'message': 'Token refreshed successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to refresh token. Please sign in again.'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/process_local', methods=['POST'])
+def process_local():
+    """Process uploaded files - handles local file uploads"""
+    try:
+        print(f"🔍 /process_local route called")
+        print(f"📋 Request method: {request.method}")
+        print(f"📋 Request content type: {request.content_type}")
+        print(f"📋 Request files: {list(request.files.keys())}")
+        print(f"📋 Request form: {dict(request.form)}")
+        
+        # Check authentication
+        if not is_authenticated():
+            print("❌ Not authenticated")
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        user_id = session.get('user_id')
+        print(f"👤 User ID: {user_id}")
+        
+        # Get uploaded files
+        uploaded_files = request.files.getlist('files')
+        force_reprocess = request.form.get('force_reprocess', 'false').lower() == 'true'
+        
+        print(f"📁 Received {len(uploaded_files)} uploaded files")
+        for i, file_obj in enumerate(uploaded_files[:3]):  # Log first 3 files
+            print(f"  📄 File {i+1}: {file_obj.filename} ({file_obj.content_length} bytes)")
+        
+        if not uploaded_files or len(uploaded_files) == 0:
+            return jsonify({'success': False, 'error': 'No files uploaded'})
+        
+        print(f"📁 Received {len(uploaded_files)} uploaded files")
+        
+        # Check user plan limits before processing
+        try:
+            from pricing_manager import pricing_manager
+            
+            # Estimate number of images (quick count)
+            from local_folder_processor import LocalFolderProcessor
+            temp_processor = LocalFolderProcessor()
+            image_files = temp_processor._filter_uploaded_image_files(uploaded_files)
+            estimated_images = len(image_files)
+            
+            if not pricing_manager.can_process_images(user_id, estimated_images):
+                user_plan = pricing_manager.get_user_plan(user_id)
+                return jsonify({
+                    'success': False, 
+                    'error': f'Plan limit exceeded. Found {estimated_images} images, but your {user_plan["name"]} plan allows {user_plan["image_limit"]} images.',
+                    'upgrade_needed': True,
+                    'current_plan': user_plan["name"],
+                    'estimated_images': estimated_images
+                })
+        except ImportError:
+            print("⚠️  Pricing manager not available, proceeding without limits")
+        
+        # Import and use local folder processor
+        from local_folder_processor import process_uploaded_files_and_store
+        
+        print(f"🔍 Processing {len(uploaded_files)} uploaded files")
+        print(f"👤 User: {user_id}")
+        print(f"🔄 Force reprocess: {force_reprocess}")
+        
+        # Process the uploaded files
+        result = process_uploaded_files_and_store(
+            user_id=user_id,
+            uploaded_files=uploaded_files,
+            force_reprocess=force_reprocess
+        )
+        
+        print(f"✅ Upload processing result: {result}")
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"❌ Error in process_local: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/process_drive', methods=['POST'])
 def process_drive():
     """Process Google Drive folder - connects to your existing code"""
@@ -227,20 +1246,70 @@ def process_drive():
         data = request.get_json()
         drive_url = data.get('drive_url')
         force_reprocess = data.get('force_reprocess', False)
+        max_depth = data.get('max_depth', 10)  # Default to 10 levels deep
         
         if not drive_url:
             return jsonify({'success': False, 'error': 'No drive URL provided'})
         
-        # Use real access token from session
+        # Validate max_depth
+        if not isinstance(max_depth, int) or max_depth < 1 or max_depth > 20:
+            max_depth = 10  # Default to 10 if invalid
+        
+        # Get valid access token (refresh if necessary)
         user_id = session['user_id']
-        access_token = session['access_token']
+        access_token = get_valid_access_token()
+        
+        if not access_token:
+            return jsonify({'success': False, 'error': 'Authentication failed. Please sign in again.'})
+        
+        # Extract folder_id from drive URL for folder isolation
+        from google_drive_handler import extract_file_id_from_url
+        folder_id = extract_file_id_from_url(drive_url)
+        if not folder_id:
+            return jsonify({'success': False, 'error': 'Could not extract folder ID from URL'})
+        
+        # Check user's plan limits before processing
+        from pricing_manager import pricing_manager
+        
+        # Get estimated file count (quick check)
+        try:
+            from real_drive_processor import RealDriveProcessor
+            temp_processor = RealDriveProcessor()
+            all_files = temp_processor._get_folder_contents_recursive(folder_id, access_token, max_depth)
+            image_files = temp_processor._filter_image_files(all_files) if all_files else []
+            estimated_images = len(image_files)
+            
+            # Check if user can process this many images
+            usage_check = pricing_manager.can_process_images(user_id, estimated_images)
+            
+            if not usage_check['allowed']:
+                return jsonify({
+                    'success': False,
+                    'error': 'plan_limit_exceeded',
+                    'message': f'Your plan allows {usage_check["limit"]} images. This folder has {estimated_images} images.',
+                    'usage_info': usage_check,
+                    'upgrade_required': True
+                })
+            
+            print(f"✅ Plan check passed: {estimated_images} images, {usage_check['remaining']} remaining")
+            
+        except Exception as e:
+            print(f"⚠️ Plan check failed, proceeding anyway: {e}")
+        
+        # Store current folder_id in session for search isolation
+        session['current_folder_id'] = folder_id
+        print(f"📁 Set current folder_id in session: {folder_id}")
         
         print(f"🔍 Starting background processing for user: {user_id}")
         print(f"🔑 Using access token: {access_token[:20]}...")
         
         # Start processing in background thread to avoid Railway timeout
         import threading
-        from progress_tracker import start_progress, stop_progress, set_status, set_total, increment, update_folder_info
+        try:
+            from progress_tracker import start_progress, stop_progress, set_status, set_total, increment, update_folder_info
+        except ImportError:
+            # Use real progress tracker instead
+            from real_progress_tracker import start_progress, stop_progress, set_status, set_total, increment, update_folder_info
         
         def background_process():
             try:
@@ -250,16 +1319,21 @@ def process_drive():
                 # Update folder info with the drive URL
                 update_folder_info(folder_path=f"Processing: {drive_url}")
                 
+                # Use real drive processing with recursive support
                 result = process_drive_folder_and_store(
                     user_id=user_id,
                     url=drive_url,
                     access_token=access_token,
-                    force_reprocess=force_reprocess
+                    force_reprocess=force_reprocess,
+                    max_depth=max_depth
                 )
                 
                 # Finalize progress for frontend: mark 100% and show completion message
                 try:
-                    from progress_tracker import complete_all_steps
+                    try:
+                        from progress_tracker import complete_all_steps
+                    except ImportError:
+                        def complete_all_steps(*args, **kwargs): pass
                     complete_all_steps()
                     update_folder_info(folder_path="Processing Done — Return to main screen")
                 except Exception:
@@ -287,7 +1361,10 @@ def process_drive():
 @app.route('/debug_progress', methods=['GET'])
 def debug_progress():
     """Debug endpoint to check current progress state"""
-    from progress_tracker import get_progress
+    try:
+        from progress_tracker import get_progress
+    except ImportError:
+        from real_progress_tracker import get_progress
     progress_data = get_progress()
     return jsonify({
         'success': True,
@@ -299,7 +1376,11 @@ def debug_progress():
 def stop_processing():
     """Stop the current processing operation"""
     try:
-        from progress_tracker import stop_tracking, update_folder_info
+        try:
+            from progress_tracker import stop_tracking, update_folder_info
+        except ImportError:
+            def stop_tracking(*args, **kwargs): pass
+            def update_folder_info(*args, **kwargs): pass
         
         print("🛑 Stop processing requested by user")
         
@@ -323,7 +1404,15 @@ def stop_processing():
 @app.route('/test_progress', methods=['GET'])
 def test_progress():
     """Test endpoint to verify progress bar is working"""
-    from progress_tracker import start_progress, update_folder_info, set_status, set_total, increment, stop_progress
+    try:
+        from progress_tracker import start_progress, update_folder_info, set_status, set_total, increment, stop_progress
+    except ImportError:
+        def start_progress(*args, **kwargs): pass
+        def update_folder_info(*args, **kwargs): pass
+        def set_status(*args, **kwargs): pass
+        def set_total(*args, **kwargs): pass
+        def increment(*args, **kwargs): pass
+        def stop_progress(*args, **kwargs): pass
     import threading
     import time
     
@@ -377,14 +1466,14 @@ def test_progress():
 
 @app.route('/search', methods=['POST'])
 def search():
-    """Search for person using uploaded selfie - connects to your existing code"""
+    """Search for person using uploaded selfie - V2 PIPELINE"""
     try:
         # Check if file was uploaded
         if 'selfie' not in request.files:
             return jsonify({'success': False, 'error': 'No selfie file uploaded'})
         
         file = request.files['selfie']
-        threshold = float(request.form.get('threshold', 0.8))
+        threshold = float(request.form.get('threshold', 0.65))  # Balanced default for better accuracy
         
         if file.filename == '':
             return jsonify({'success': False, 'error': 'No file selected'})
@@ -395,7 +1484,10 @@ def search():
         # Save uploaded file to temp storage
         filename = secure_filename(file.filename)
         unique_filename = f"selfie_{uuid.uuid4().hex}{os.path.splitext(filename)[1]}"
-        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        
+        # Ensure upload directory exists
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        file_path = os.path.normpath(os.path.join(UPLOAD_FOLDER, unique_filename))
         
         file.save(file_path)
         
@@ -407,43 +1499,190 @@ def search():
         
         print(f"🔍 Searching for person with selfie: {file_path}")
         print(f"👤 User ID: {user_id}")
+        print(f"🎯 Using V2 pipeline for consistent 1024D embeddings")
+        print(f"🔧 DEBUG: Starting search process...")
         
-        # Call your existing search function
-        matches = search_for_person(file_path, user_id, threshold)
+        # Use new V2 pipeline
+        if real_engine is None:
+            return jsonify({'success': False, 'error': 'Facial recognition pipeline not available'})
         
-        if not matches:
+        try:
+            # Load image
+            import cv2
+            import numpy as np
+            from sklearn.metrics.pairwise import cosine_similarity
+            
+            # Normalize path to handle Windows path separators
+            normalized_path = os.path.normpath(file_path)
+            print(f"🔧 DEBUG: Normalized file path: {normalized_path}")
+            
+            image = cv2.imread(normalized_path)
+            if image is None:
+                print(f"❌ DEBUG: cv2.imread failed for path: {normalized_path}")
+                print(f"❌ DEBUG: File exists: {os.path.exists(normalized_path)}")
+                return jsonify({'success': False, 'error': 'Could not load image'})
+            
+            # Process selfie with real face recognition engine (Phase 1)
+            print(f"🔧 DEBUG: Processing selfie with universal search...")
+            from real_face_recognition_engine import search_with_real_recognition_universal
+            
+            # Use universal search across ALL user's photos (Drive + Uploaded)
+            search_result = search_with_real_recognition_universal(normalized_path, user_id, threshold)
+            print(f"🔧 DEBUG: Universal search result: {search_result.get('total_matches', 0)} matches found")
+            
+            # Cache the search results so they appear in /my-photos
+            if search_result.get('total_matches', 0) > 0:
+                try:
+                    from search_cache_manager import cache_manager
+                    
+                    # Create a folder ID for this search session
+                    import time
+                    search_session_id = f"search_{int(time.time())}"
+                    
+                    # Save search results to cache
+                    cache_manager.save_search_results(
+                        user_id=user_id,
+                        folder_id=search_session_id,
+                        search_results=search_result,
+                        folder_files=[],  # Empty since this is a universal search
+                        selfie_embedding=None  # We don't need to store the selfie embedding
+                    )
+                    print(f"💾 Cached search results for session: {search_session_id}")
+                    
+                except Exception as e:
+                    print(f"⚠️ Failed to cache search results: {e}")
+            
+            # Clean up temp file
+            try:
+                os.remove(normalized_path)
+            except:
+                pass
+            
+            return jsonify(search_result)
+            
+            if not result.get('success', False):
+                print(f"❌ DEBUG: Face processing failed - result: {result}")
+                return jsonify({'success': False, 'error': 'Face processing failed - no face detected in selfie'})
+            
+            # Get the first embedding (ensure 1024D consistency)
+            embeddings = result.get('embeddings', [])
+            print(f"🔧 DEBUG: Found {len(embeddings)} embeddings in selfie")
+            if not embeddings:
+                print(f"❌ DEBUG: No embeddings found in result: {result}")
+                return jsonify({'success': False, 'error': 'No face detected in selfie'})
+            
+            selfie_embedding = embeddings[0]['embedding']
+            if isinstance(selfie_embedding, list):
+                selfie_embedding = np.array(selfie_embedding)
+            print(f"🔧 DEBUG: Selfie embedding shape: {selfie_embedding.shape}, type: {type(selfie_embedding)}")
+            
+            # Note: Embedding dimension may vary by model config; handle at compare time
+            
+            # Get faces for this user from Firebase, filtered by current folder for isolation
+            current_folder_id = session.get('current_folder_id')
+            print(f"🔧 DEBUG: Fetching faces from Firebase for user: {user_id}")
+            print(f"📁 DEBUG: Current folder_id from session: {current_folder_id}")
+            user_faces = fetch_embeddings_for_user(user_id, current_folder_id)
+            filter_msg = f" (folder: {current_folder_id})" if current_folder_id else " (all folders)"
+            print(f"🔍 Fetched {len(user_faces)} faces from database for user {user_id}{filter_msg}")
+            
+            if not user_faces:
+                print(f"❌ DEBUG: No faces found in database for user {user_id}")
+                print(f"🔧 DEBUG: Checking Firebase connection...")
+                try:
+                    from firebase_store import get_firebase_stats
+                    stats = get_firebase_stats()
+                    print(f"🔧 DEBUG: Firebase stats: {stats}")
+                except Exception as e:
+                    print(f"❌ DEBUG: Firebase stats error: {e}")
+                return jsonify({'success': True, 'matches': [], 'message': 'No photos found for this user'})
+            
+            print(f"🔧 DEBUG: Sample face data: {user_faces[0] if user_faces else 'None'}")
+            
+            # Calculate similarities using the same method as database processing
+            matches = []
+            print(f"🔍 Comparing selfie embedding (1024D) with {len(user_faces)} database faces")
+            
+            for i, face in enumerate(user_faces):
+                try:
+                    print(f"🔧 DEBUG: Processing face {i+1}/{len(user_faces)}: {face.get('photo_reference', 'unknown')}")
+                    
+                    # Get embedding from database
+                    db_embedding = np.array(face['face_embedding'])
+                    print(f"🔧 DEBUG: DB embedding shape: {db_embedding.shape}, type: {type(db_embedding)}")
+                    
+                    # Align to common dimension and normalize for cosine
+                    common_dim = min(len(selfie_embedding), len(db_embedding))
+                    se = selfie_embedding[:common_dim]
+                    de = db_embedding[:common_dim]
+                    print(f"🔧 DEBUG: Common dimension: {common_dim}, selfie: {len(selfie_embedding)}, db: {len(db_embedding)}")
+                    
+                    # Normalize to unit vectors to compute cosine via dot
+                    se_norm = se / (np.linalg.norm(se) + 1e-8)
+                    de_norm = de / (np.linalg.norm(de) + 1e-8)
+                    similarity = float(np.dot(se_norm, de_norm))
+                    
+                    print(f"📊 Similarity with {face['photo_reference']}: {similarity:.3f}")
+                    
+                    if similarity >= threshold:
+                        print(f"✅ DEBUG: Match found! Similarity {similarity:.3f} >= threshold {threshold}")
+                        
+                        # Extract file_id from photo_reference (format: user_id_file_id)
+                        photo_reference = face['photo_reference']
+                        if '_' in photo_reference:
+                            file_id = photo_reference.split('_', 1)[1]
+                        else:
+                            file_id = photo_reference
+                        print(f"🔧 DEBUG: Extracted file_id: {file_id} from photo_reference: {photo_reference}")
+                        
+                        # Find photo file using the file_id
+                        print(f"🔧 DEBUG: Searching for photo with file_id: {file_id}")
+                        photo_name = _find_photo_by_file_id(user_id, file_id)
+                        print(f"🔧 DEBUG: Photo search result: {photo_name}")
+                        
+                        if photo_name:
+                            matches.append({
+                                'person_id': photo_reference,
+                                'photo_name': photo_name,
+                                'photo_path': photo_name,  # Frontend will construct /photo/{filename}
+                                'similarity': float(similarity),
+                                'confidence': f"{similarity:.2%}"
+                            })
+                        print(f"✅ DEBUG: Added match: {photo_name}")
+                    else:
+                        print(f"❌ DEBUG: No match - similarity {similarity:.3f} < threshold {threshold}")
+                        
+                except Exception as e:
+                    print(f"❌ DEBUG: Error processing face {i+1}: {e}")
+                    print(f"❌ DEBUG: Face data: {face}")
+                    import traceback
+                    traceback.print_exc()
+                    continue
+            
+            # Sort by similarity (highest first)
+            matches.sort(key=lambda x: x['similarity'], reverse=True)
+            print(f"🔧 DEBUG: Found {len(matches)} total matches above threshold {threshold}")
+            
+            # Clean up temp file
+            try:
+                os.remove(normalized_path)
+            except:
+                pass
+            
+            # Return results directly (no double processing)
             return jsonify({
                 'success': True,
-                'matches': [],
-                'message': 'No matches found'
+                'matches': matches,  # All matches - no artificial limits
+                'faces_detected': 1 if matches else 0,  # 1 if we found matches, 0 if no face
+                'total_matches': len(matches),
+                'threshold_used': threshold,
+                'feedback_session_id': '',
+                'message': f'Found {len(matches)} matches'
             })
-        
-        # Format matches for frontend
-        formatted_matches = []
-        for match in matches:
-            if isinstance(match, dict):
-                # Extract photo reference and similarity score
-                photo_ref = match.get('photo_reference', 'Unknown')
-                similarity_score = match.get('similarity_score', 0.0)  # Use the pre-calculated similarity
-                
-                # Get just the filename from the full path for display
-                photo_name = os.path.basename(photo_ref) if photo_ref != 'Unknown' else 'Unknown'
-                
-                # Debug: Print what we're getting from search
-                print(f"🔍 Match data: photo_ref={photo_ref}, similarity={similarity_score}")
-                print(f"🔍 Formatted: photo_name={photo_name}, photo_path={photo_ref}")
-                
-                formatted_matches.append({
-                    'photo_name': photo_name,
-                    'photo_path': photo_ref,  # Use full path for serving photos
-                    'similarity': similarity_score
-                })
-        
-        return jsonify({
-            'success': True,
-            'matches': formatted_matches,
-            'message': f'Found {len(formatted_matches)} matches'
-        })
+            
+        except Exception as e:
+            print(f"❌ Error in V2 pipeline search: {e}")
+            return jsonify({'success': False, 'error': f'Search failed: {str(e)}'})
         
     except Exception as e:
         print(f"Error in search: {e}")
@@ -451,61 +1690,58 @@ def search():
 
 @app.route('/photo/<path:filename>')
 def serve_photo(filename):
-    """Serve photos from user's storage folder"""
+    """Serve photos from user's cache folder"""
     try:
         print(f"🔍 Serving photo: {filename}")
         
         # Get user ID from session - must be authenticated
         if 'user_id' not in session:
-            return jsonify({'error': 'Not authenticated. Please sign in first.'}), 401
+            print(f"   ❌ Not authenticated")
+            return jsonify({'error': 'Not authenticated'}), 401
         
         user_id = session['user_id']
-        user_storage_path = os.path.join('storage', 'data', user_id)
+        current_folder_id = session.get('current_folder_id')
         
         print(f"   👤 User ID: {user_id}")
-        print(f"   📁 User storage path: {user_storage_path}")
+        print(f"   📁 Current folder ID: {current_folder_id}")
         
-        if os.path.exists(user_storage_path):
-            print(f"   🔍 Searching in user folder: {user_storage_path}")
-            # Search recursively through all subdirectories
-            for root, dirs, files in os.walk(user_storage_path):
-                print(f"      Checking directory: {root}")
-                print(f"      Files in this dir: {files[:5]}...")  # Show first 5 files
-                if filename in files:
-                    full_path = os.path.join(root, filename)
-                    print(f"   ✅ Found at: {full_path}")
-                    return send_from_directory(root, filename)
+        # First, try uploaded files folder (universal search includes uploaded files)
+        upload_folder = os.path.join('storage', 'uploads', user_id)
+        upload_file_path = os.path.join(upload_folder, filename)
+        print(f"   📁 Checking uploads: {upload_file_path}")
+        print(f"   📁 Upload folder exists: {os.path.exists(upload_folder)}")
+        print(f"   📁 Upload file exists: {os.path.exists(upload_file_path)}")
+        
+        if os.path.exists(upload_file_path):
+            print(f"   ✅ Found uploaded file: {upload_file_path}")
+            # For nested paths like "1111/ABN10404.jpg", we need to serve from the base upload folder
+            return send_from_directory(upload_folder, filename)
+        
+        # Second, try Google Drive cache folder (if folder session exists)
+        if current_folder_id:
+            cache_folder = os.path.join('storage', 'downloads', f"{user_id}_{current_folder_id}")
+            cache_file_path = os.path.join(cache_folder, filename)
+            print(f"   📁 Checking cache: {cache_file_path}")
+            
+            if os.path.exists(cache_file_path):
+                print(f"   ✅ Found cached file: {cache_file_path}")
+                return send_from_directory(cache_folder, filename)
         else:
-            print(f"   ❌ User storage path does not exist: {user_storage_path}")
+            print(f"   ⚠️  No folder session, skipping cache check")
         
-        # Fallback: also check temp folder for uploaded selfies
-        temp_path = os.path.join('storage', 'temp', 'selfies')
-        if os.path.exists(temp_path) and filename in os.listdir(temp_path):
-            print(f"   ✅ Found in temp folder: {temp_path}")
-            return send_from_directory(temp_path, filename)
+        print(f"   ❌ Photo not found in uploads or cache: {filename}")
+        print(f"   📁 Files in upload folder:")
+        if os.path.exists(upload_folder):
+            for root, dirs, files in os.walk(upload_folder):
+                for file in files:
+                    print(f"       {os.path.relpath(os.path.join(root, file), upload_folder)}")
         
-        print(f"   ❌ Photo not found: {filename}")
-        print(f"   📂 Available directories in storage/data:")
-        if os.path.exists('storage/data'):
-            for user_dir in os.listdir('storage/data'):
-                user_path = os.path.join('storage/data', user_dir)
-                if os.path.isdir(user_path):
-                    print(f"      - {user_dir}/")
-                    for subdir in os.listdir(user_path)[:3]:  # Show first 3 subdirs
-                        subdir_path = os.path.join(user_path, subdir)
-                        if os.path.isdir(subdir_path):
-                            print(f"        - {subdir}/")
-                            # Check if our filename is in this subdir
-                            if os.path.exists(subdir_path):
-                                files_in_subdir = os.listdir(subdir_path)
-                                if filename in files_in_subdir:
-                                    print(f"          ✅ FOUND {filename} in {subdir}/")
-                                else:
-                                    print(f"          Files in {subdir}/: {files_in_subdir[:5]}...")
         return jsonify({'error': 'Photo not found'}), 404
         
     except Exception as e:
         print(f"Error serving photo: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/cache_stats')
@@ -517,7 +1753,10 @@ def cache_stats():
             return jsonify({'error': 'Not authenticated. Please sign in first.'}), 401
         
         user_id = session['user_id']
-        stats = get_cache_stats(user_id)
+        if get_cache_stats:
+            stats = get_cache_stats(user_id)
+        else:
+            stats = {'message': 'Cache stats not available'}
         return jsonify(stats)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -597,7 +1836,278 @@ def find_file(filename):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# User Feedback Endpoint for Active Learning
+@app.route('/feedback', methods=['POST'])
+def record_feedback():
+    """Record user feedback about search results for active learning"""
+    try:
+        data = request.get_json()
+        
+        # Check if user is authenticated
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not authenticated'})
+        
+        user_id = session['user_id']
+        photo_reference = data.get('photo_reference')
+        is_correct = data.get('is_correct', False)
+        selfie_path = data.get('selfie_path')
+        similarity_score = data.get('similarity_score')
+        
+        if not photo_reference:
+            return jsonify({'success': False, 'error': 'Photo reference required'})
+        
+        print(f"📝 Recording feedback: {photo_reference} -> {'✅ CORRECT' if is_correct else '❌ INCORRECT'}")
+        
+        # Record feedback using the active learning system
+        success = record_user_feedback(
+            user_id=user_id,
+            photo_reference=photo_reference,
+            is_correct=is_correct,
+            selfie_path=selfie_path,
+            similarity_score=similarity_score
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Feedback recorded successfully',
+                'learning_active': True
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to record feedback'
+            })
+            
+    except Exception as e:
+        print(f"❌ Error recording feedback: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Learning Statistics Endpoint
+@app.route('/download-feedback', methods=['POST'])
+def record_download():
+    """Record download as positive feedback for learning"""
+    try:
+        data = request.get_json()
+        
+        # Check if user is authenticated
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not authenticated'})
+        
+        user_id = session['user_id']
+        photo_reference = data.get('photo_reference')
+        similarity_score = data.get('similarity_score')
+        
+        if not photo_reference:
+            return jsonify({'success': False, 'error': 'Photo reference required'})
+        
+        print(f"📥 Recording download feedback: {photo_reference}")
+        
+        # Record download as positive feedback
+        success = record_download_feedback(
+            user_id=user_id,
+            photo_reference=photo_reference,
+            similarity_score=similarity_score
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Download feedback recorded - system is learning!',
+                'learning_active': True
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to record download feedback'
+            })
+            
+    except Exception as e:
+        print(f"❌ Error recording download feedback: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/learning-stats', methods=['GET'])
+def get_learning_stats():
+    """Get active learning statistics"""
+    try:
+        # Check if user is authenticated
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not authenticated'})
+        
+        user_id = session['user_id']
+        
+        # Get learning statistics using the new function
+        stats = get_user_learning_stats(user_id)
+        
+        return jsonify({
+            'success': True,
+            'stats': stats,
+            'user_id': user_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting learning stats: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Folder browsing functionality temporarily disabled to fix Google Drive processing
+
+@app.route('/process_local', methods=['POST'])
+def process_local_photos():
+    """Process local photos and generate embeddings"""
+    try:
+        import tempfile
+        import os
+        
+        # Get files from request
+        files = request.files.getlist('photos')
+        folder_path = request.form.get('folder_path', 'local_folder')
+        
+        if not files:
+            return jsonify({'success': False, 'message': 'No photos provided'})
+        
+        processed_count = 0
+        errors = []
+        
+        for file in files:
+            if file and allowed_file(file.filename):
+                try:
+                    # Save file temporarily
+                    filename = secure_filename(file.filename)
+                    temp_path = os.path.join(tempfile.gettempdir(), filename)
+                    file.save(temp_path)
+                    
+                    # Process with new robust engine V2
+                    result = add_to_database(
+                        image_path=temp_path,
+                        user_id='local_user',
+                        photo_reference=filename
+                    )
+                    
+                    if result.get('success', False):
+                        processed_count += 1
+                        print(f"✅ Processed: {filename}")
+                    else:
+                        errors.append(f"Failed to process {filename}: {result.get('error', 'Unknown error')}")
+                    
+                    # Clean up temp file
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                        
+                except Exception as e:
+                    errors.append(f"Error processing {file.filename}: {str(e)}")
+                    print(f"❌ Error processing {file.filename}: {str(e)}")
+        
+        return jsonify({
+            'success': True,
+            'processed_count': processed_count,
+            'total_files': len(files),
+            'errors': errors[:5]  # Limit error messages
+        })
+        
+    except Exception as e:
+        print(f"❌ Local processing error: {str(e)}")
+        return jsonify({'success': False, 'message': f'Processing error: {str(e)}'})
+
+@app.route('/add_person_v2', methods=['POST'])
+def add_person_v2():
+    """Add a person to the database using V2 pipeline"""
+    try:
+        if 'images' not in request.files:
+            return jsonify({'success': False, 'error': 'No image files uploaded'})
+        
+        files = request.files.getlist('images')
+        person_id = request.form.get('person_id', '')
+        
+        if not person_id:
+            return jsonify({'success': False, 'error': 'Person ID required'})
+        
+        if not files or files[0].filename == '':
+            return jsonify({'success': False, 'error': 'No files selected'})
+        
+        user_id = session.get('user_id', 'anonymous')
+        
+        if real_engine is None:
+            return jsonify({'success': False, 'error': 'Facial recognition pipeline not available'})
+        
+        # Process images
+        images = []
+        for file in files:
+            if file.filename and allowed_file(file.filename):
+                # Save temp file
+                filename = secure_filename(file.filename)
+                unique_filename = f"temp_{uuid.uuid4().hex}{os.path.splitext(filename)[1]}"
+                file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+                file.save(file_path)
+                
+                # Load image
+                import cv2
+                image = cv2.imread(file_path)
+                if image is not None:
+                    # Resize if too large
+                    height, width = image.shape[:2]
+                    if width > 1000 or height > 1000:
+                        scale = min(1000/width, 1000/height)
+                        new_width = int(width * scale)
+                        new_height = int(height * scale)
+                        image = cv2.resize(image, (new_width, new_height))
+                    
+                    images.append(image)
+                
+                # Clean up temp file
+                try:
+                    os.remove(file_path)
+                except:
+                    pass
+        
+        if not images:
+            return jsonify({'success': False, 'error': 'No valid images could be processed'})
+        
+        # Add to database
+        result = real_engine.add_person(person_id, images)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"Error in add_person_v2: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/submit_feedback_v2', methods=['POST'])
+def submit_feedback_v2():
+    """Submit user feedback for search results"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        result_id = data.get('result_id')
+        is_correct = data.get('is_correct', False)
+        confidence = data.get('confidence', 3)
+        
+        if not session_id or result_id is None:
+            return jsonify({'success': False, 'error': 'Missing required parameters'})
+        
+        if real_engine is None:
+            return jsonify({'success': False, 'error': 'Facial recognition pipeline not available'})
+        
+        success = real_engine.submit_feedback(session_id, result_id, is_correct, confidence)
+        
+        return jsonify({'success': success})
+        
+    except Exception as e:
+        print(f"Error in submit_feedback_v2: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/pipeline_stats_v2', methods=['GET'])
+def pipeline_stats_v2():
+    """Get pipeline statistics"""
+    try:
+        if real_engine is None:
+            return jsonify({'success': False, 'error': 'Facial recognition pipeline not available'})
+        
+        stats = real_engine.get_pipeline_statistics()
+        return jsonify({'success': True, 'stats': stats})
+        
+    except Exception as e:
+        print(f"Error in pipeline_stats_v2: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
     # Get port from environment variable (for Railway) or use default
@@ -609,3 +2119,4 @@ if __name__ == '__main__':
     print(f"📱 Open http://localhost:{port} in your browser")
     print("⚠️  Auto-reload disabled to prevent connection issues during processing")
     app.run(debug=False, host='0.0.0.0', port=port)
+ 
