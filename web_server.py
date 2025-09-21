@@ -8,6 +8,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 import os
 import tempfile
 import uuid
+import time
 import requests
 from werkzeug.utils import secure_filename
 from urllib.parse import urlencode, parse_qs, urlparse
@@ -320,7 +321,8 @@ def get_user_learning_stats(user_id: str) -> dict:
         }
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-change-this-in-production'  # Change this in production
+# Load secret key from environment variable (more secure)
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-change-in-production-' + str(uuid.uuid4()))
 
 # Add progress tracking endpoints (if available)
 if create_progress_endpoint:
@@ -2107,6 +2109,224 @@ def pipeline_stats_v2():
         
     except Exception as e:
         print(f"Error in pipeline_stats_v2: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+# ===== VIDEO PROCESSING ROUTES =====
+from video_processor import video_processor
+
+@app.route('/video-app')
+def video_app():
+    """Video upload and processing interface"""
+    try:
+        return render_template('video-app.html')
+    except Exception as e:
+        print(f"❌ Error loading video app: {e}")
+        return render_template('video-app.html')
+
+@app.route('/my-videos')
+def my_videos():
+    """List user's processed videos"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return redirect('/')
+        
+        # Load user's video database
+        video_processor.load_video_database(user_id)
+        
+        # Get user's videos
+        videos = video_processor.get_user_videos(user_id)
+        
+        return render_template('my-videos.html', videos=videos, user_id=user_id)
+        
+    except Exception as e:
+        print(f"❌ Error loading my videos: {e}")
+        return render_template('my-videos.html', videos=[], user_id=session.get('user_id', ''))
+
+@app.route('/video-search/<video_id>')
+def video_search(video_id):
+    """Search within a specific video"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return redirect('/')
+        
+        # Load user's video database
+        video_processor.load_video_database(user_id)
+        
+        # Get video info
+        video_info = video_processor.get_video_info(user_id, video_id)
+        
+        if not video_info.get('success'):
+            return render_template('video-search.html', 
+                                 video_info={'error': video_info.get('error')},
+                                 user_id=user_id)
+        
+        return render_template('video-search.html', 
+                             video_info=video_info, 
+                             user_id=user_id)
+        
+    except Exception as e:
+        print(f"❌ Error loading video search: {e}")
+        return render_template('video-search.html', 
+                             video_info={'error': str(e)}, 
+                             user_id=session.get('user_id', ''))
+
+@app.route('/upload-video', methods=['POST'])
+def upload_video():
+    """Handle video upload and processing"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': 'User not authenticated'})
+        
+        # Check if video file was uploaded
+        if 'video' not in request.files:
+            return jsonify({'success': False, 'error': 'No video file provided'})
+        
+        video_file = request.files['video']
+        if video_file.filename == '':
+            return jsonify({'success': False, 'error': 'No video file selected'})
+        
+        # Check file extension
+        if not any(video_file.filename.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv']):
+            return jsonify({'success': False, 'error': 'Unsupported video format. Supported: MP4, AVI, MOV, MKV, WMV, FLV'})
+        
+        # Create user video directory
+        user_video_dir = os.path.join('storage', 'videos', user_id)
+        os.makedirs(user_video_dir, exist_ok=True)
+        
+        # Generate unique video ID
+        video_id = f"video_{int(time.time())}_{uuid.uuid4().hex[:8]}"
+        video_filename = f"{video_id}_{secure_filename(video_file.filename)}"
+        video_path = os.path.join(user_video_dir, video_filename)
+        
+        # Save video file
+        video_file.save(video_path)
+        
+        # Load user's video database
+        video_processor.load_video_database(user_id)
+        
+        # Process video in background (for now, process immediately)
+        result = video_processor.process_video(video_path, user_id, video_id)
+        
+        if result.get('success'):
+            # Save video database
+            video_processor.save_video_database(user_id)
+            
+            return jsonify({
+                'success': True,
+                'video_id': video_id,
+                'video_name': result['video_name'],
+                'faces_found': result['faces_found'],
+                'processing_time': result['processing_time']
+            })
+        else:
+            return jsonify({'success': False, 'error': result.get('error')})
+        
+    except Exception as e:
+        print(f"❌ Error uploading video: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/search-video', methods=['POST'])
+def search_video():
+    """Search for faces within a specific video"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': 'User not authenticated'})
+        
+        # Get form data
+        video_id = request.form.get('video_id')
+        if not video_id:
+            return jsonify({'success': False, 'error': 'Video ID required'})
+        
+        # Check if selfie was uploaded
+        if 'selfie' not in request.files:
+            return jsonify({'success': False, 'error': 'No selfie image provided'})
+        
+        selfie_file = request.files['selfie']
+        if selfie_file.filename == '':
+            return jsonify({'success': False, 'error': 'No selfie image selected'})
+        
+        # Save selfie temporarily
+        selfie_filename = f"temp_selfie_{uuid.uuid4().hex[:8]}.jpg"
+        selfie_path = os.path.join('storage', 'temp', selfie_filename)
+        os.makedirs(os.path.dirname(selfie_path), exist_ok=True)
+        selfie_file.save(selfie_path)
+        
+        # Load user's video database
+        video_processor.load_video_database(user_id)
+        
+        # Search for faces in the specific video
+        matches = video_processor.search_video_faces(selfie_path, user_id, video_id)
+        
+        # Clean up temp file
+        try:
+            os.remove(selfie_path)
+        except:
+            pass
+        
+        return jsonify({
+            'success': True,
+            'matches': matches,
+            'total_matches': len(matches),
+            'video_id': video_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Error searching video: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/video-progress')
+def video_progress():
+    """Get video processing progress"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': 'User not authenticated'})
+        
+        # Get progress from video processor
+        progress = video_processor.progress_tracker.get_status()
+        
+        return jsonify({'success': True, 'progress': progress})
+        
+    except Exception as e:
+        print(f"❌ Error getting video progress: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/download-video-segment', methods=['POST'])
+def download_video_segment():
+    """Download a video segment at specific timestamp"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': 'User not authenticated'})
+        
+        # Get form data
+        video_id = request.form.get('video_id')
+        timestamp = float(request.form.get('timestamp', 0))
+        
+        if not video_id:
+            return jsonify({'success': False, 'error': 'Video ID required'})
+        
+        # Find the video file
+        user_video_dir = os.path.join('storage', 'videos', user_id)
+        video_files = [f for f in os.listdir(user_video_dir) if f.startswith(video_id)]
+        
+        if not video_files:
+            return jsonify({'success': False, 'error': 'Video file not found'})
+        
+        video_file = video_files[0]
+        video_path = os.path.join(user_video_dir, video_file)
+        
+        # For now, return the full video file
+        # In a real implementation, you would extract a segment using ffmpeg
+        return send_from_directory(user_video_dir, video_file, as_attachment=True, 
+                                 download_name=f"video_segment_{timestamp:.1f}s.mp4")
+        
+    except Exception as e:
+        print(f"❌ Error downloading video segment: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
