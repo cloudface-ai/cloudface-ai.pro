@@ -53,6 +53,57 @@
     
     <!-- DNS Prefetch -->
     <link rel="dns-prefetch" href="//www.google-analytics.com">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'GA_MEASUREMENT_ID', {
+            page_title: 'CloudFace AI - Homepage',
+            page_location: window.location.href,
+            custom_map: {
+                'custom_parameter_1': 'face_recognition_app'
+            }
+        });
+        
+        // Track face search events
+        function trackFaceSearch(sessionType) {
+            gtag('event', 'face_search_started', {
+                'event_category': 'engagement',
+                'event_label': sessionType,
+                'value': 1
+            });
+        }
+        
+        // Track photo processing events
+        function trackPhotoProcessing(photoCount) {
+            gtag('event', 'photos_processed', {
+                'event_category': 'engagement',
+                'event_label': 'photo_processing',
+                'value': photoCount
+            });
+        }
+    </script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>*{margin:0;padding:0;box-sizing:border-box}:root{--primary:#1a73e8;--primary-light:#4285f4;--primary-dark:#0d47a1;--accent:#ea4335;--accent-light:#f28b82;--success:#34a853;--warning:#fbbc04;--bg:#fafafa;--surface:#fff;--text-primary:#202124;--text-secondary:#5f6368;--text-tertiary:#9aa0a6;--border:#dadce0;--shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.24);--shadow-hover:0 14px 28px rgba(0,0,0,.25),0 10px 10px rgba(0,0,0,.22);--radius:16px;--radius-sm:8px;--transition:none}body{font-family:'Google Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text-primary);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
