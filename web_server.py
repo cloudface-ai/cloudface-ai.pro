@@ -1352,13 +1352,42 @@ def process_drive():
         # Return immediately to avoid timeout
         return jsonify({
             'success': True,
-            'message': 'Processing started in background. Check terminal for progress.',
+            'message': 'Processing your request...',
             'status': 'processing'
         })
         
     except Exception as e:
         print(f"Error starting drive processing: {e}")
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/progress', methods=['GET'])
+def get_progress():
+    """Get current progress status"""
+    try:
+        try:
+            from progress_tracker import get_progress
+        except ImportError:
+            from real_progress_tracker import get_progress
+        
+        progress_data = get_progress()
+        return jsonify({
+            'success': True,
+            'progress_data': progress_data,
+            'is_active': progress_data.get('is_active', False)
+        })
+    except Exception as e:
+        print(f"❌ Error getting progress: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'progress_data': {
+                'overall': 0,
+                'current_step': 'Error',
+                'folder_info': {'folder_path': 'Error occurred', 'total_files': 0, 'files_found': 0},
+                'steps': {},
+                'is_active': False
+            }
+        })
 
 @app.route('/debug_progress', methods=['GET'])
 def debug_progress():

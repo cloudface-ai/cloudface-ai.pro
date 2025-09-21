@@ -41,8 +41,23 @@
         .header {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
-            padding: 1rem 0;
-            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            background: rgba(255,255,255,.95);
+        }
+
+        .header-top {
+            background: var(--primary);
+            color: #fff;
+            padding: 4px 0;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .header-main {
+            padding: 1px 0;
         }
 
         .header-content {
@@ -52,15 +67,105 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: .5rem;
         }
 
         .logo {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--primary);
+            text-decoration: none;
             display: flex;
             align-items: center;
-            text-decoration: none;
+            gap: 4px;
+        }
+
+        .nav-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: none;
+            padding: 0.5rem;
             color: var(--text-primary);
-            font-size: 1.25rem;
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            list-style: none;
+        }
+
+        .nav-menu a {
+            color: var(--text-primary);
+            text-decoration: none;
             font-weight: 500;
+            transition: var(--transition);
+            padding: .5rem 1rem;
+            border-radius: var(--radius-sm);
+        }
+
+        .nav-menu a:hover {
+            color: var(--primary);
+            background: var(--bg);
+        }
+
+        .nav-menu a.active {
+            color: var(--primary);
+            background: var(--bg);
+        }
+
+        .cta-button {
+            background: var(--primary);
+            color: #fff;
+            padding: .75rem 1.5rem;
+            border-radius: var(--radius);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all .1s ease;
+        }
+
+        .cta-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        @media (max-width: 768px) {
+            .nav-toggle {
+                display: flex;
+            }
+
+            .nav-menu {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--surface);
+                border-top: 1px solid var(--border);
+                box-shadow: var(--shadow);
+                border-radius: 0 0 var(--radius) var(--radius);
+                flex-direction: column;
+                padding: 1rem 0;
+            }
+
+            .nav-menu.active {
+                display: flex;
+            }
+
+            .nav-menu a {
+                display: block;
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border);
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
         }
 
         .nav-back {
@@ -75,6 +180,129 @@
 
         .nav-back:hover {
             color: var(--primary-dark);
+        }
+
+        /* Footer Styles */
+        .footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            margin-top: 4rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .footer-section p {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section ul li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer-section ul li a:hover {
+            color: var(--primary);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .social-link:hover {
+            color: var(--primary);
+        }
+
+        .social-link svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid var(--border);
+            padding: 1.5rem 0;
+        }
+
+        .footer-bottom-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-left p {
+            color: var(--text-tertiary);
+            font-size: 14px;
+            margin: 0 0 0.25rem 0;
+            line-height: 1.4;
+        }
+
+        .footer-left p .heart {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .footer-left p:last-child {
+            margin-bottom: 0;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .footer-bottom-content {
+                flex-direction: column;
+                text-align: center;
+            }
         }
 
         .container {
@@ -359,17 +587,33 @@
 <body>
     <!-- Header -->
     <header class="header">
-        <div class="header-content">
-            <a href="/" class="logo">
-                <img src="/static/Cloudface-ai-logo.png" alt="Cloudface AI" style="height:1.3em; width:auto; margin-right:0.5rem;">
-                CloudFace AI
-            </a>
-            <a href="/app" class="nav-back">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="15,18 9,12 15,6"></polyline>
-                </svg>
-                Back to App
-            </a>
+        <div class="header-top">
+            <span>Find any photo in your cloud with AI—instantly</span>
+        </div>
+        <div class="header-main">
+            <div class="container">
+                <div class="header-content">
+                    <a href="/" class="logo">
+                        <img src="/static/Cloudface-ai-logo.png" alt="Cloudface AI" style="height:1.3em; width:auto; vertical-align:middle;">
+                        <span style="margin-left:.4em;">Cloudface AI</span>
+                    </a>
+                    <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation menu">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                        </svg>
+                    </button>
+                    <nav class="nav-menu" id="navMenu">
+                        <a href="/">Home</a>
+                        <a href="/about">About</a>
+                        <a href="/video-app">Video Search</a>
+                        <a href="/blog">Blog</a>
+                        <a href="/pricing" class="active">Pricing</a>
+                        <a href="/how-it-works">How It Works</a>
+                        <a href="/#features">Features</a>
+                        <a href="/app" class="cta-button">Try App</a>
+                    </nav>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -520,5 +764,92 @@
             });
         });
     </script>
+
+    <script>
+        function toggleNav() {
+            const navMenu = document.getElementById('navMenu');
+            navMenu.classList.toggle('active');
+        }
+    </script>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About CloudFace AI</h3>
+                    <p>We create AI-powered face recognition technology that helps you discover and organize photos across your digital life. Our focus is on privacy, performance, and beautiful user experience.</p>
+                    <div class="social-links">
+                         <a href="#" class="social-link" aria-label="Follow @whoisvinodkumar on Twitter">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                            @whoisvinodkumar
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="/how-it-works">How It Works</a></li>
+                        <li><a href="/pricing">Pricing</a></li>
+                        <li><a href="/blog">Blog</a></li>
+                        <li><a href="/app">Try App</a></li>
+                        <li><a href="/contact">Contact Us</a></li>
+                    </ul>
+                </div>
+                
+                                 <div class="footer-section">
+                     <h3>Services</h3>
+                     <ul>
+                         <li><a href="/#features">Face Recognition</a></li>
+                         <li><a href="/#features">Photo Organization</a></li>
+                         <li><a href="/#features">Google Drive Integration</a></li>
+                         <li><a href="/#features">AI Processing</a></li>
+                         <li><a href="/contact">Support</a></li>
+                 </div>
+                
+                <div class="footer-section">
+                    <h3>Contact Info</h3>
+                    <p>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display: inline; margin-right: 8px;">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        Gurugram, India
+                    </p>
+                    <p>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display: inline; margin-right: 8px;">
+                            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                        </svg>
+                        hello@cloudface-ai.com
+                    </p>
+                    <p>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display: inline; margin-right: 8px;">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        AI-Powered Face Recognition
+                    </p>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <div class="footer-bottom-content">
+                    <div class="footer-left">
+                        <p>&copy; 2025 cloudface-ai.com. All rights reserved.</p>
+                        <p>Made with <span class="heart">❤</span> in Gurugram, India</p>
+                    </div>
+                    <div class="footer-links">
+                        <a href="/privacy">Privacy Policy</a>
+                        <a href="/terms">Terms & Conditions</a>
+                        <a href="/pricing">Pricing</a>
+                        <a href="/refund">Refund Policy</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

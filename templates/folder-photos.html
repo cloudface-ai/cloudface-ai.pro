@@ -232,6 +232,147 @@
             background: #ea4335;
         }
 
+        /* Photo Actions */
+        .photo-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+
+        /* Photo Modal Styles */
+        .photo-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .photo-modal {
+            background: white;
+            border-radius: 12px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .photo-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+        
+        .photo-modal-header h3 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
+            color: #6b7280;
+            transition: all 0.2s ease;
+        }
+        
+        .modal-close:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .photo-modal-content {
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-height: 70vh;
+            overflow: hidden;
+        }
+        
+        .enlarged-photo {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .photo-modal-actions {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            background: #f9fafb;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to { 
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        /* Responsive modal */
+        @media (max-width: 768px) {
+            .photo-modal {
+                max-width: 95vw;
+                max-height: 95vh;
+            }
+            
+            .photo-modal-header {
+                padding: 0.75rem 1rem;
+            }
+            
+            .photo-modal-content {
+                padding: 0.5rem;
+                max-height: 75vh;
+            }
+            
+            .photo-modal-actions {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+            }
+
+            .photo-actions {
+                flex-direction: column;
+            }
+        }
+
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
@@ -431,9 +572,24 @@
                 </div>
                 <div class="photo-info">
                     <div class="photo-name" title="{{ match.photo_name }}">{{ match.photo_name }}</div>
-                    <div class="photo-stats" style="display: none;">
-                        <span>{{ match.confidence if match.confidence else "%.1f%"|format(match.similarity * 100) }}</span>
-                        <span>Match</span>
+                    <div class="photo-actions">
+                        <button class="btn btn-primary btn-sm" onclick="enlargePhoto('{{ match.photo_name }}', '{{ match.photo_name }}')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 3h4a2 2 0 0 1 2 2v4"/>
+                                <path d="M10.5 10.5L21 21"/>
+                                <path d="M13.5 13.5L21 21"/>
+                                <path d="M21 3v6h-6"/>
+                            </svg>
+                            Enlarge
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="downloadPhoto('{{ match.photo_name }}')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Download
+                        </button>
                     </div>
                 </div>
             </div>
@@ -453,6 +609,73 @@
                 });
             });
         });
+        function downloadPhoto(photoPath) {
+            // Create download link for original file
+            const link = document.createElement('a');
+            link.href = `/photo/${encodeURIComponent(photoPath)}`;
+            link.download = photoPath.split('/').pop() || 'photo.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log(`📥 Downloaded photo: ${photoPath}`);
+        }
+
+        function enlargePhoto(photoPath, photoName) {
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.className = 'photo-modal-overlay';
+            modal.innerHTML = `
+                <div class="photo-modal">
+                    <div class="photo-modal-header">
+                        <h3>${photoName}</h3>
+                        <button class="modal-close" onclick="closePhotoModal()">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="photo-modal-content">
+                        <img src="/photo/${encodeURIComponent(photoPath)}" alt="${photoName}" class="enlarged-photo">
+                    </div>
+                    <div class="photo-modal-actions">
+                        <button class="btn btn-success" onclick="downloadPhoto('${photoPath}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Download
+                        </button>
+                        <button class="btn btn-secondary" onclick="closePhotoModal()">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Close modal on overlay click
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closePhotoModal();
+                }
+            });
+            
+            // Close modal on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closePhotoModal();
+                }
+            });
+        }
+
+        function closePhotoModal() {
+            const modal = document.querySelector('.photo-modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+        }
     </script>
 </body>
 </html>

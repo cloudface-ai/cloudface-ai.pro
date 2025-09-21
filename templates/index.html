@@ -656,12 +656,11 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                             My Photos
                         </a>
                         <a href="/about">About</a>
+                        <a href="/video-app">Video Search</a>
                         <a href="/blog">Blog</a>
                         <a href="/pricing">Pricing</a>
-                        <a href="/contact">Contact</a>
                         <a href="/how-it-works">How It Works</a>
                         <a href="/#features">Features</a>
-                        <a href="/#privacy">Privacy</a>
                         <a href="/app" class="cta-button">Try App</a>
                     </nav>
                 </div>
@@ -726,8 +725,19 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 
                 <!-- Cloud URL Option -->
                 <div class="file-upload" onclick="focusDriveUrl()">
-                    <input type="text" id="driveUrl" placeholder="Paste your cloud URL to process photos" onkeypress="handleKeyPress(event)" oninput="handleDriveUrlInput(event)" onpaste="setTimeout(() => handleDriveUrlInput(event), 10)">
+                    <input type="text" id="driveUrl" placeholder="Paste your Google Drive folder URL here" onkeypress="handleKeyPress(event)" oninput="handleDriveUrlInput(event)" onpaste="setTimeout(() => handleDriveUrlInput(event), 10)">
                     <p>☁️ Enter your Google Drive folder URL</p>
+                    <div class="help-guide">
+                        <details>
+                            <summary>📖 How to get your Google Drive link</summary>
+                            <ol>
+                                <li>Open your Google Drive folder</li>
+                                <li>Right-click and select "Get link"</li>
+                                <li>Change sharing to "Anyone with the link can view"</li>
+                                <li>Copy and paste the link above</li>
+                            </ol>
+                        </details>
+                    </div>
                     <button type="button" class="btn btn-secondary" onclick="clearDriveUrl(); event.stopPropagation();" style="display: none; margin-top: 0.5rem; font-size: 0.8rem;" id="clearDriveBtn">
                         🧹 Clear URL
                     </button>
@@ -756,6 +766,17 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                         📂 Select local folder
                     </button>
                     <input type="file" id="localFolderInput" webkitdirectory directory multiple style="display: none;" onchange="handleLocalFolderSelection(this)">
+                    <div class="help-guide">
+                        <details>
+                            <summary>📖 How to select local photos</summary>
+                            <ol>
+                                <li>Click "Select local folder" above</li>
+                                <li>Choose a folder containing your photos</li>
+                                <li>Make sure the folder has image files (JPG, PNG, etc.)</li>
+                                <li>Click "Process Photos" when ready</li>
+                            </ol>
+                        </details>
+                    </div>
                     <div id="selectedFolderPath" class="selected-folder-path"></div>
                     <button type="button" class="btn btn-secondary" onclick="clearLocalFolder()" style="display: none; margin-top: 0.5rem; font-size: 0.8rem;" id="clearFolderBtn">
                         🧹 Clear Folder
@@ -778,8 +799,11 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 <div class="checkbox-container">
                     <label>
                         <input type="checkbox" id="forceReprocess">
-                        Force reprocess all photos (ignore cache)
+                        🔄 Reprocess existing photos
                     </label>
+                    <small style="display: block; margin-top: 4px; color: #666; font-size: 12px;">
+                        Skip this unless you need to reprocess photos that were already analyzed
+                    </small>
                 </div>
                 
                 <button class="btn" onclick="processPhotos()">Process Photos</button>
@@ -814,15 +838,28 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                         <label class="threshold-option">
                             <input type="radio" name="threshold" value="0.75">
                             <span class="threshold-label">Precise</span>
+                            <small>Fewer, very accurate matches</small>
                         </label>
                         <label class="threshold-option">
                             <input type="radio" name="threshold" value="0.65" checked>
                             <span class="threshold-label">Balanced</span>
+                            <small>Good balance of accuracy and coverage</small>
                         </label>
                         <label class="threshold-option">
                             <input type="radio" name="threshold" value="0.5">
                             <span class="threshold-label">Broad</span>
+                            <small>More matches, may include similar faces</small>
                         </label>
+                    </div>
+                    <div class="help-guide">
+                        <details>
+                            <summary>💡 What do these settings mean?</summary>
+                            <ul>
+                                <li><strong>Precise:</strong> Only very similar faces (recommended for finding exact matches)</li>
+                                <li><strong>Balanced:</strong> Good mix of accuracy and finding all photos (recommended)</li>
+                                <li><strong>Broad:</strong> Finds more photos but may include people who look similar</li>
+                            </ul>
+                        </details>
                     </div>
                 </div>
 
@@ -884,6 +921,115 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
             stopProgressTracking();
         }
 
+        // Local Progress Bar Functions
+        function showLocalProgressBar(fileCount) {
+            // Create or show local progress container
+            let localProgressContainer = document.getElementById('localProgressContainer');
+            if (!localProgressContainer) {
+                localProgressContainer = document.createElement('div');
+                localProgressContainer.id = 'localProgressContainer';
+                localProgressContainer.innerHTML = `
+                    <div class="local-progress-overlay">
+                        <div class="local-progress-container">
+                            <div class="local-progress-header">
+                                <h3>📁 Processing Local Photos</h3>
+                            </div>
+                            <div class="local-progress-status">
+                                <div id="localProgressStatus">Uploading files...</div>
+                                <div id="localProgressDetails">Please wait while we process your photos</div>
+                            </div>
+                            <div class="local-main-progress">
+                                <div class="local-progress-bar">
+                                    <div id="localProgressFill" class="local-progress-fill"></div>
+                                </div>
+                                <div class="local-progress-percentage" id="localProgressPercentage">0%</div>
+                            </div>
+                            <div class="local-current-operation" id="localCurrentOperation">
+                                <div class="local-operation-icon" id="localOperationIcon">⏳</div>
+                                <div class="local-operation-text" id="localOperationText">Getting ready...</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(localProgressContainer);
+            }
+            
+            // Show the container
+            localProgressContainer.style.display = 'block';
+            
+            // Initialize progress
+            updateLocalProgress(0, 'Uploading files...', `Processing ${fileCount} photos`);
+        }
+
+        function hideLocalProgressBar() {
+            const container = document.getElementById('localProgressContainer');
+            if (container) {
+                container.style.display = 'none';
+            }
+        }
+
+        function updateLocalProgress(percentage, status, details) {
+            const progressFill = document.getElementById('localProgressFill');
+            const progressPercentage = document.getElementById('localProgressPercentage');
+            const progressStatus = document.getElementById('localProgressStatus');
+            const progressDetails = document.getElementById('localProgressDetails');
+            const operationIcon = document.getElementById('localOperationIcon');
+            const operationText = document.getElementById('localOperationText');
+
+            if (progressFill && progressPercentage) {
+                progressFill.style.width = percentage + '%';
+                progressPercentage.textContent = percentage + '%';
+            }
+
+            if (progressStatus) progressStatus.textContent = status;
+            if (progressDetails) progressDetails.textContent = details;
+            
+            if (operationIcon && operationText) {
+                if (percentage >= 100) {
+                    operationIcon.textContent = '✅';
+                    operationText.textContent = 'Processing complete!';
+                } else if (percentage > 0) {
+                    operationIcon.textContent = '🔄';
+                    operationText.textContent = 'Processing photos...';
+                } else {
+                    operationIcon.textContent = '⏳';
+                    operationText.textContent = 'Getting ready...';
+                }
+            }
+        }
+
+        function startLocalProgressPolling() {
+            // Poll for completion every 2 seconds
+            const pollInterval = setInterval(() => {
+                fetch('/progress')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('📊 Local progress polling response:', data);
+                        if (data && data.progress_data) {
+                            const progress = data.progress_data.overall || 0;
+                            const currentStep = data.progress_data.current_step || 'Processing photos...';
+                            const folderInfo = data.progress_data.folder_info || {};
+                            
+                            updateLocalProgress(progress, currentStep, `Processing ${folderInfo.files_found || 0} photos`);
+                            
+                            if (progress >= 100) {
+                                clearInterval(pollInterval);
+                                setTimeout(() => {
+                                    hideLocalProgressBar();
+                                    showStatus('processStatus', '✅ Local photos processed successfully!', 'success');
+                                    document.getElementById('searchBtn').disabled = false;
+                                }, 1500);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.log('❌ Local progress polling error:', error);
+                        clearInterval(pollInterval);
+                        hideLocalProgressBar();
+                    });
+            }, 2000);
+        }
+
         function startProgressTracking() {
             console.log('🔄 Starting progress tracking...');
             
@@ -891,6 +1037,34 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
             if (window.progressEventSource) {
                 window.progressEventSource.close();
             }
+            
+            // Set up completion timeout (fallback)
+            if (window.completionTimeout) {
+                clearTimeout(window.completionTimeout);
+            }
+            window.completionTimeout = setTimeout(() => {
+                console.log('⏰ Completion timeout reached - forcing completion');
+                const progressStatus = document.getElementById('progressStatus');
+                const progressDetails = document.getElementById('progressDetails');
+                const operationIcon = document.getElementById('operationIcon');
+                const operationText = document.getElementById('operationText');
+                const nextSteps = document.getElementById('nextSteps');
+                
+                if (progressStatus) progressStatus.textContent = '✅ Processing complete!';
+                if (progressDetails) progressDetails.textContent = 'Your photos are ready for face search!';
+                if (operationIcon) operationIcon.textContent = '✅';
+                if (operationText) operationText.textContent = 'Processing complete!';
+                if (nextSteps) nextSteps.style.display = 'block';
+                
+                // Auto-hide after 3 seconds
+                setTimeout(() => {
+                    hideProgressBar();
+                    showStatus('processStatus', '✅ Processing complete! You can now search for faces in your photos.', 'success');
+                    document.getElementById('searchBtn').disabled = false;
+                }, 3000);
+                
+                stopProgressTracking();
+            }, 300000); // 5 minutes timeout
             
             // Start new SSE connection
             window.progressEventSource = new EventSource('/progress/stream');
@@ -993,6 +1167,15 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         }
 
         function updateProgressDisplay(progressData) {
+            console.log('🔄 Updating progress display:', progressData);
+            
+            // Check if processing is complete
+            const overallProgress = progressData.overall || 0;
+            const isComplete = overallProgress >= 100;
+            const searchReady = progressData.search_ready || false;
+            
+            console.log(`📊 Progress: ${overallProgress}%, Complete: ${isComplete}, Search Ready: ${searchReady}`);
+            
             // Update folder information
             if (progressData.folder_info) {
                 const folderPath = document.getElementById('folderPath');
@@ -1016,52 +1199,102 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 }
             }
             
-            // Update overall progress
-            const overallPercentage = document.getElementById('overallPercentage');
-            const overallProgressBar = document.getElementById('overallProgressBar');
+            // Update main progress (simplified progress bar)
+            const mainProgressBar = document.getElementById('mainProgressBar');
+            const mainPercentage = document.getElementById('mainPercentage');
             
-            if (overallPercentage) {
-                overallPercentage.textContent = `${progressData.overall}%`;
-            }
-            if (overallProgressBar) {
-                overallProgressBar.style.width = `${progressData.overall}%`;
-            }
-            
-            // Update estimated time
-            const estimatedTime = document.getElementById('estimatedTime');
-            if (estimatedTime && progressData.estimated_time) {
-                estimatedTime.textContent = progressData.estimated_time;
+            if (mainProgressBar && mainPercentage) {
+                const overallProgress = progressData.overall || 0;
+                mainProgressBar.style.width = overallProgress + '%';
+                mainPercentage.textContent = overallProgress + '%';
+                console.log(`📊 Progress updated: ${overallProgress}%`);
             }
             
-            // Update current step if steps exist
-            if (progressData.steps && typeof progressData.steps === 'object') {
-                // Find the currently active step
-                let activeStep = null;
-                for (const [stepName, stepData] of Object.entries(progressData.steps)) {
-                    if (stepData.progress > 0 && stepData.progress < 100) {
-                        activeStep = stepName;
-                        break;
+            // Update status (simplified progress bar)
+            const progressStatus = document.getElementById('progressStatus');
+            const progressDetails = document.getElementById('progressDetails');
+            const operationIcon = document.getElementById('operationIcon');
+            const operationText = document.getElementById('operationText');
+            const nextSteps = document.getElementById('nextSteps');
+
+            if (progressStatus) {
+                const currentStep = progressData.current_step || 'Processing...';
+                progressStatus.textContent = currentStep;
+                console.log(`📝 Status updated: ${currentStep}`);
+                
+                // Check for completion message from progress tracker
+                if (progressData.completion_message) {
+                    progressStatus.textContent = progressData.completion_message;
+                }
+            }
+
+            if (progressDetails) {
+                const folderInfo = progressData.folder_info || {};
+                const totalFiles = folderInfo.total_files || 0;
+                const filesFound = folderInfo.files_found || 0;
+                
+                if (totalFiles > 0) {
+                    progressDetails.textContent = `Processing ${filesFound} of ${totalFiles} photos`;
+                } else {
+                    progressDetails.textContent = 'Getting ready to process your photos...';
+                }
+            }
+            
+            // Update current operation (simplified progress bar)
+            if (operationIcon && operationText) {
+                const steps = progressData.steps || {};
+                let currentStep = null;
+                let currentIcon = '⏳';
+
+                // Find the active step
+                Object.keys(steps).forEach(stepName => {
+                    const step = steps[stepName];
+                    if (step.progress > 0 && step.progress < 100) {
+                        currentStep = step;
+                        currentIcon = step.icon || '⏳';
                     }
-                }
-                
-                // If no active step, find the first step with progress > 0
-                if (!activeStep) {
-                    for (const [stepName, stepData] of Object.entries(progressData.steps)) {
-                        if (stepData.progress > 0) {
-                            activeStep = stepName;
-                            break;
-                        }
+                });
+
+                if (currentStep) {
+                    operationIcon.textContent = currentIcon;
+                    operationText.textContent = `${currentStep.status} (${currentStep.processed_files}/${currentStep.total_files})`;
+                    console.log(`🔧 Operation: ${currentStep.status}`);
+                } else if ((progressData.overall || 0) >= 100 || progressData.search_ready || progressData.completion_message) {
+                    operationIcon.textContent = '✅';
+                    operationText.textContent = 'Processing complete!';
+                    
+                    // Update status to show completion message
+                    if (progressStatus) {
+                        progressStatus.textContent = '✅ Processing done, now search your photos!';
                     }
+                    if (progressDetails) {
+                        progressDetails.textContent = 'Your photos are ready for face search!';
+                    }
+                    
+                    // Show next steps
+                    if (nextSteps) {
+                        nextSteps.style.display = 'block';
+                    }
+                    
+                    // Auto-hide progress bar after 3 seconds
+                    setTimeout(() => {
+                        hideProgressBar();
+                        showStatus('processStatus', '✅ Processing complete! You can now search for faces in your photos.', 'success');
+                        document.getElementById('searchBtn').disabled = false;
+                    }, 3000);
+                    
+                    // Stop progress tracking when complete
+                    stopProgressTracking();
+                    
+                    // Clear completion timeout
+                    if (window.completionTimeout) {
+                        clearTimeout(window.completionTimeout);
+                        window.completionTimeout = null;
+                    }
+                } else {
+                    operationIcon.textContent = '⏳';
+                    operationText.textContent = 'Getting ready...';
                 }
-                
-                // Update current step display
-                if (activeStep && activeStep !== window.currentActiveStep) {
-                    window.currentActiveStep = activeStep;
-                    showCurrentStep(activeStep, progressData.steps[activeStep]);
-                }
-                
-                // Update step navigation dots
-                updateStepNavigation(progressData.steps);
             }
         }
 
@@ -1556,9 +1789,9 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
 
             const forceReprocess = document.getElementById('forceReprocess').checked;
 
-            // Start progress tracking
-            document.getElementById('processLoading').style.display = 'block';
-            showStatus('processStatus', 'Uploading and processing files...', 'info');
+            // Show local progress bar
+            const fileCount = selectedLocalFiles.length;
+            showLocalProgressBar(fileCount);
 
             // Create FormData to upload files
             const formData = new FormData();
@@ -1588,28 +1821,27 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 return response.json();
             })
             .then(data => {
-                document.getElementById('processLoading').style.display = 'none';
                 if (data.success) {
                     if (data.status === 'processing') {
-                        showStatus('processStatus', `🔄 ${data.message}`, 'info');
-                        // Show the beautiful progress bar
-                        showProgressBar();
+                        // Update progress to show processing
+                        updateLocalProgress(50, 'Processing photos...', `Analyzing ${fileCount} photos`);
+                        
+                        // Start polling for completion
+                        startLocalProgressPolling();
                     } else {
+                        // Immediate completion
+                        updateLocalProgress(100, 'Complete!', `Processed ${data.processed_count} faces`);
+                        setTimeout(() => {
+                            hideLocalProgressBar();
                         const message = data.cached_result ? 
                             `✅ ${data.message} (using cache)` : 
                             `✅ Successfully processed ${data.processed_count} faces from ${data.total_files} uploaded images`;
-                        
                         showStatus('processStatus', message, 'success');
-                        
-                        // Enable search functionality
                         document.getElementById('searchBtn').disabled = false;
-                        
-                        // Show completion message if progress was shown
-                        if (document.getElementById('progressContainer').style.display !== 'none') {
-                            hideProgressBar();
-                        }
+                        }, 2000);
                     }
                 } else {
+                    hideLocalProgressBar();
                     let errorMessage = data.error || 'Unknown error occurred';
                     
                     if (data.upgrade_needed) {
@@ -1620,7 +1852,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 }
             })
             .catch(error => {
-                document.getElementById('processLoading').style.display = 'none';
+                hideLocalProgressBar();
                 console.error('Error:', error);
                 showStatus('processStatus', `❌ Network error: ${error.message}`, 'error');
             });
@@ -2441,7 +2673,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         </div>
     </footer>
 
-    <!-- Modern Progress Bar Component -->
+    <!-- Simplified Progress Bar Component -->
     <div id="progressContainer" class="progress-container" style="display: none;">
         <div class="progress-header">
             <div class="progress-title">
@@ -2452,10 +2684,10 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                         <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <h3>Processing Photos</h3>
+                <h3 id="progressTitle">Processing Photos</h3>
             </div>
             <div class="progress-controls">
-                <button id="progressClose" class="progress-close-btn" onclick="try{hideProgressBar();}catch(e){}">
+                <button id="progressClose" class="progress-close-btn" onclick="hideProgressBar()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -2463,78 +2695,37 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
             </div>
         </div>
         
-        <!-- Folder Information -->
-        <div class="folder-info">
-            <div class="folder-path">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22 19C22 19.5304 21.7893 20.0391 21.4142 20.4142C21.0391 20.7893 20.5304 21 20 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V5C2 4.46957 2.21071 3.96086 2.58579 3.58579C2.96086 3.21071 3.46957 3 4 3H9L11 5H20C20.5304 5 21.0391 5.21071 21.4142 5.58579C21.7893 5.96086 22 6.46957 22 7V19Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                </svg>
-                <span id="folderPath">Scanning Google Drive folder...</span>
-            </div>
-            <div class="file-count">
-                <span id="fileCount">Found 0 images</span>
-            </div>
+        <!-- Simple Status Display -->
+        <div class="progress-status">
+            <div class="status-text" id="progressStatus">Initializing...</div>
+            <div class="status-details" id="progressDetails">Please wait while we process your photos</div>
         </div>
         
-        <!-- Overall Progress -->
-        <div class="overall-progress">
-            <div class="progress-label">
-                <span>Overall Progress</span>
-                <span id="overallPercentage">0%</span>
-            </div>
+        <!-- Main Progress Bar -->
+        <div class="main-progress">
             <div class="progress-bar">
-                <div id="overallProgressBar" class="progress-fill"></div>
+                <div id="mainProgressBar" class="progress-fill"></div>
             </div>
-            <div id="estimatedTime" class="estimated-time">Initializing...</div>
-        </div>
-        <!-- Completion Notice -->
-        <div id="completionNotice" class="completion-notice" style="display: none;">Processing Done — Return to step 2</div>
-        
-        <!-- Current Step Progress -->
-        <div class="current-step-container">
-            <div id="currentStep" class="current-step" style="display: none;">
-                <div class="step-header">
-                    <div class="step-icon">
-                        <svg id="stepIconSvg" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"></svg>
-                    </div>
-                    <div class="step-info">
-                        <span id="stepName" class="step-name">Processing Photos</span>
-                    </div>
-                    <div class="step-meta">
-                    <span id="stepPercentage" class="step-percentage">0%</span>
-                    </div>
-                </div>
-                <div class="step-progress">
-                    <div class="step-progress-bar">
-                        <div id="stepProgressFill" class="step-progress-fill"></div>
-                    </div>
-                    <div class="step-meta-row">
-                        <div id="stepStatus" class="step-status">Preparing...</div>
-                        <div id="stepCount" class="step-count">0 of 0 files</div>
-                </div>
-            </div>
-        </div>
-            <!-- Activity Log -->
-            <div id="activityLog" class="activity-log" style="display: none;"></div>
+            <div class="progress-percentage" id="mainPercentage">0%</div>
         </div>
         
-        <!-- Step Navigation Dots (removed by request) -->
-        <div class="step-navigation" style="display: none;"></div>
+        <!-- Current Operation -->
+        <div class="current-operation" id="currentOperation">
+            <div class="operation-icon" id="operationIcon">⏳</div>
+            <div class="operation-text" id="operationText">Getting ready...</div>
+        </div>
         
-        <!-- Errors and Warnings -->
-        <div id="progressMessages" class="progress-messages" style="display: none;">
-            <div id="progressErrors" class="progress-errors" style="display: none;">
-                <h4>❌ Errors</h4>
-                <div id="errorList"></div>
-            </div>
-            <div id="progressWarnings" class="progress-warnings" style="display: none;">
-                <h4>⚠️ Warnings</h4>
-                <div id="warningList"></div>
+        <!-- Next Steps (shown when complete) -->
+        <div id="nextSteps" class="next-steps" style="display: none;">
+            <div class="next-steps-title">🎉 Processing Complete!</div>
+            <div class="next-steps-content">
+                <p>Your photos have been processed successfully.</p>
+                <p><strong>Next:</strong> Go to Step 2 to search for faces in your photos.</p>
             </div>
         </div>
     </div>
 
-    <!-- Modern Progress Bar Styles -->
+    <!-- Simplified Progress Bar Styles -->
     <style>
     .progress-container {
         position: fixed;
@@ -2542,14 +2733,12 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         left: 50%;
         transform: translate(-50%, -50%);
         width: 90%;
-        max-width: 600px;
+        max-width: 500px;
         background: #ffffff;
-        border-radius: 20px;
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         z-index: 10000;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        max-height: 85vh;
-        overflow-y: auto;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         backdrop-filter: blur(20px);
     }
 
@@ -2557,7 +2746,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 24px 28px 20px;
+        padding: 20px 24px 16px;
         border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     }
 
@@ -2568,10 +2757,10 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
     }
 
     .progress-icon {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 8px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -2581,9 +2770,8 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
     .progress-title h3 {
         margin: 0;
         color: #1a1a1a;
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
-        letter-spacing: -0.02em;
     }
 
     .progress-close-btn {
@@ -2591,10 +2779,10 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         border: none;
         color: #8e8e93;
         cursor: pointer;
-        padding: 8px;
-        border-radius: 8px;
-        width: 36px;
-        height: 36px;
+        padding: 6px;
+        border-radius: 6px;
+        width: 32px;
+        height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -2606,33 +2794,255 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         color: #1a1a1a;
     }
 
-    .progress-controls {
+    .progress-status {
+        padding: 20px 24px 16px;
+        text-align: center;
+    }
+
+    .status-text {
+        font-size: 16px;
+        font-weight: 500;
+        color: #1a1a1a;
+        margin-bottom: 4px;
+    }
+
+    .status-details {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .main-progress {
+        padding: 0 24px 20px;
+        text-align: center;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+        width: 0%;
+    }
+
+    .progress-percentage {
+        font-size: 14px;
+        font-weight: 600;
+        color: #667eea;
+    }
+
+    .current-operation {
         display: flex;
         align-items: center;
-        gap: 8px;
-    }
-
-    .activity-log {
-        margin: 8px 16px 0 16px;
-        max-height: 110px; /* reduce to avoid card scrollbar */
-        overflow: hidden; /* hide to avoid main scroll bar on card */
-        background: #fafafa;
-        border: 1px solid rgba(0, 0, 0, 0.06);
+        gap: 12px;
+        padding: 16px 24px;
+        background: #f8f9fa;
+        margin: 0 24px 20px;
         border-radius: 8px;
-        padding: 8px 10px;
-        font-size: 12px;
-        line-height: 1.35;
     }
 
-    .activity-line {
-        padding: 4px 0;
+    .operation-icon {
+        font-size: 18px;
+    }
+
+    .operation-text {
+        font-size: 14px;
         color: #333;
     }
 
-    .folder-info {
-        padding: 20px 28px;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    .next-steps {
+        padding: 20px 24px;
+        background: #f0f8ff;
+        margin: 0 24px 24px;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+
+    .next-steps-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 8px;
+    }
+
+    .next-steps-content {
+        font-size: 14px;
+        color: #333;
+        line-height: 1.5;
+    }
+
+    .next-steps-content p {
+        margin: 4px 0;
+    }
+
+    /* Local Progress Bar Styles */
+    .local-progress-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    }
+
+    .local-progress-container {
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        width: 90%;
+        max-width: 450px;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .local-progress-header {
+        padding: 20px 24px 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        text-align: center;
+    }
+
+    .local-progress-header h3 {
+        margin: 0;
+        color: #1a1a1a;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .local-progress-status {
+        padding: 20px 24px 16px;
+        text-align: center;
+    }
+
+    #localProgressStatus {
+        font-size: 16px;
+        font-weight: 500;
+        color: #1a1a1a;
+        margin-bottom: 4px;
+    }
+
+    #localProgressDetails {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .local-main-progress {
+        padding: 0 24px 20px;
+        text-align: center;
+    }
+
+    .local-progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+
+    .local-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+        width: 0%;
+    }
+
+    .local-progress-percentage {
+        font-size: 14px;
+        font-weight: 600;
+        color: #667eea;
+    }
+
+    .local-current-operation {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 24px 24px;
+        background: #f8f9fa;
+        margin: 0 24px 0;
+        border-radius: 8px;
+    }
+
+    .local-operation-icon {
+        font-size: 18px;
+    }
+
+    .local-operation-text {
+        font-size: 14px;
+        color: #333;
+    }
+
+    /* Help Guide Styles */
+    .help-guide {
+        margin-top: 12px;
+        font-size: 14px;
+    }
+
+    .help-guide details {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px;
+        cursor: pointer;
+    }
+
+    .help-guide summary {
+        font-weight: 500;
+        color: #495057;
+        outline: none;
+        list-style: none;
+    }
+
+    .help-guide summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .help-guide summary::before {
+        content: "▶";
+        margin-right: 8px;
+        transition: transform 0.2s ease;
+    }
+
+    .help-guide details[open] summary::before {
+        transform: rotate(90deg);
+    }
+
+    .help-guide ol, .help-guide ul {
+        margin: 12px 0 0 0;
+        padding-left: 20px;
+    }
+
+    .help-guide li {
+        margin: 6px 0;
+        color: #495057;
+        line-height: 1.4;
+    }
+
+    .help-guide small {
+        display: block;
+        color: #6c757d;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    .threshold-option small {
+        display: block;
+        color: #6c757d;
+        font-size: 11px;
+        margin-top: 2px;
+        font-weight: normal;
     }
 
     .folder-path {

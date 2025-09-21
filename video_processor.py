@@ -232,7 +232,7 @@ class VideoFaceRecognitionEngine:
             print(f"❌ Error detecting faces in frame at {timestamp:.2f}s: {e}")
             return []
     
-    def process_video(self, video_path: str, user_id: str) -> Dict[str, Any]:
+    def process_video(self, video_path: str, user_id: str, video_id: str = None) -> Dict[str, Any]:
         """
         Process entire video for face recognition
         Returns: Processing results with face count and metadata
@@ -272,14 +272,16 @@ class VideoFaceRecognitionEngine:
             
             # Add faces to FAISS database
             if all_faces:
-                self._add_video_faces_to_database(all_faces, user_id, video_name)
+                self._add_video_faces_to_database(all_faces, user_id, video_name, video_id)
             
             # Complete processing
             self.progress_tracker.complete_processing()
             
             result = {
                 'success': True,
+                'video_id': video_id or video_name,
                 'video_name': video_name,
+                'video_path': video_path,
                 'total_frames': len(frames),
                 'faces_found': len(all_faces),
                 'processing_time': self.progress_tracker.get_status()['elapsed_time']
@@ -294,7 +296,7 @@ class VideoFaceRecognitionEngine:
             self.progress_tracker.add_error(error_msg)
             return {'success': False, 'error': error_msg}
     
-    def _add_video_faces_to_database(self, faces: List[Dict[str, Any]], user_id: str, video_name: str):
+    def _add_video_faces_to_database(self, faces: List[Dict[str, Any]], user_id: str, video_name: str, video_id: str = None):
         """Add video faces to FAISS database"""
         try:
             if not faces or self.faiss_index is None:
@@ -312,6 +314,7 @@ class VideoFaceRecognitionEngine:
                 face_id = start_id + i
                 self.face_database[face_id] = {
                     'user_id': user_id,
+                    'video_id': video_id or video_name,
                     'video_name': video_name,
                     'timestamp': face['timestamp'],
                     'bbox': face['bbox'],
@@ -324,9 +327,10 @@ class VideoFaceRecognitionEngine:
         except Exception as e:
             print(f"❌ Error adding faces to database: {e}")
     
-    def search_video_faces(self, query_image_path: str, user_id: str, threshold: float = 0.6) -> List[Dict[str, Any]]:
+    def search_video_faces(self, query_image_path: str, user_id: str, video_id: str = None, threshold: float = 0.6) -> List[Dict[str, Any]]:
         """
         Search for similar faces in processed videos
+        If video_id is provided, search only within that specific video
         Returns: List of matches with video name, timestamp, and similarity
         """
         try:
@@ -358,7 +362,12 @@ class VideoFaceRecognitionEngine:
                     
                     # Only return faces from this user
                     if face_data['user_id'] == user_id:
+                        # If video_id specified, filter by that video only
+                        if video_id and face_data.get('video_id') != video_id:
+                            continue
+                            
                         matches.append({
+                            'video_id': face_data.get('video_id', face_data['video_name']),
                             'video_name': face_data['video_name'],
                             'timestamp': face_data['timestamp'],
                             'similarity': float(similarity),
@@ -375,6 +384,73 @@ class VideoFaceRecognitionEngine:
         except Exception as e:
             print(f"❌ Error searching video faces: {e}")
             return []
+    
+    def get_user_videos(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get list of processed videos for a user"""
+        try:
+            videos = {}
+            
+            # Collect unique videos from face database
+            for face_id, face_data in self.face_database.items():
+                if face_data['user_id'] == user_id:
+                    video_id = face_data.get('video_id', face_data['video_name'])
+                    video_name = face_data['video_name']
+                    
+                    if video_id not in videos:
+                        videos[video_id] = {
+                            'video_id': video_id,
+                            'video_name': video_name,
+                            'faces_count': 0,
+                            'first_processed': face_data.get('timestamp', 0)
+                        }
+                    
+                    videos[video_id]['faces_count'] += 1
+            
+            # Convert to list and sort by first processed time
+            video_list = list(videos.values())
+            video_list.sort(key=lambda x: x['first_processed'], reverse=True)
+            
+            return video_list
+            
+        except Exception as e:
+            print(f"❌ Error getting user videos: {e}")
+            return []
+    
+    def get_video_info(self, user_id: str, video_id: str) -> Dict[str, Any]:
+        """Get detailed information about a specific video"""
+        try:
+            faces_in_video = []
+            timestamps = []
+            
+            # Collect all faces from this video
+            for face_id, face_data in self.face_database.items():
+                if (face_data['user_id'] == user_id and 
+                    face_data.get('video_id') == video_id):
+                    faces_in_video.append(face_data)
+                    timestamps.append(face_data['timestamp'])
+            
+            if not faces_in_video:
+                return {'success': False, 'error': 'Video not found'}
+            
+            # Calculate video statistics
+            unique_timestamps = sorted(set(timestamps))
+            video_name = faces_in_video[0]['video_name']
+            
+            return {
+                'success': True,
+                'video_id': video_id,
+                'video_name': video_name,
+                'faces_count': len(faces_in_video),
+                'unique_timestamps': len(unique_timestamps),
+                'duration_range': {
+                    'start': min(timestamps),
+                    'end': max(timestamps)
+                }
+            }
+            
+        except Exception as e:
+            print(f"❌ Error getting video info: {e}")
+            return {'success': False, 'error': str(e)}
     
     def save_video_database(self, user_id: str):
         """Save video face database to disk"""

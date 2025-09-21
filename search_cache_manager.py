@@ -217,8 +217,8 @@ class SearchCacheManager:
                             # Get cover photo from search results
                             cover_photo = None
                             try:
-                                user_cache_dir = self._get_cache_dir(user_id, folder_name)
-                                results_file = os.path.join(user_cache_dir, 'search_results.json')
+                                folder_cache_dir = self._get_cache_dir(user_id, folder_name)
+                                results_file = os.path.join(folder_cache_dir, 'search_results.json')
                                 if os.path.exists(results_file):
                                     with open(results_file, 'r') as f:
                                         results_data = json.load(f)
@@ -232,8 +232,8 @@ class SearchCacheManager:
                             # Get actual photo count from search results
                             actual_photo_count = 0
                             try:
-                                user_cache_dir = self._get_cache_dir(user_id, folder_name)
-                                results_file = os.path.join(user_cache_dir, 'search_results.json')
+                                folder_cache_dir = self._get_cache_dir(user_id, folder_name)
+                                results_file = os.path.join(folder_cache_dir, 'search_results.json')
                                 if os.path.exists(results_file):
                                     with open(results_file, 'r') as f:
                                         results_data = json.load(f)
