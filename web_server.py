@@ -721,6 +721,26 @@ def blog_privacy_experts():
     """Privacy Experts Expose Big Tech Surveillance - Expert Quotes"""
     return render_template('blog/privacy-experts-expose-big-tech-surveillance.html')
 
+@app.route('/blog/best-face-search-apps-2025')
+def best_face_search_apps_2025():
+    """Show the best face search apps 2025 comparison blog post"""
+    return render_template('blog_posts/best_face_search_apps_2025.html')
+
+@app.route('/blog/cloudface-ai-privacy-secure')
+def cloudface_ai_privacy_secure():
+    """Show the CloudFace AI privacy secure blog post"""
+    return render_template('blog_posts/cloudface_ai_privacy_secure.html')
+
+@app.route('/blog/google-drive-face-search-guide')
+def google_drive_face_search_guide():
+    """Show the Google Drive face search guide blog post"""
+    return render_template('blog_posts/google_drive_face_search_guide.html')
+
+@app.route('/blog/face-recognition-dark-blurry-photos')
+def face_recognition_dark_blurry_photos():
+    """Show the face recognition dark blurry photos blog post"""
+    return render_template('blog_posts/face_recognition_dark_blurry_photos.html')
+
 @app.route('/privacy')
 def privacy():
     """Show the privacy policy page"""
@@ -2357,6 +2377,16 @@ def download_video_segment():
     except Exception as e:
         print(f"❌ Error downloading video segment: {e}")
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/robots.txt')
+def robots_txt():
+    """Serve robots.txt file"""
+    return send_file('robots.txt', mimetype='text/plain')
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    """Serve sitemap.xml file"""
+    return send_file('sitemap.xml', mimetype='application/xml')
 
 if __name__ == '__main__':
     # Get port from environment variable (for Railway) or use default

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+?<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -8,7 +8,7 @@
     <!-- Primary Meta Tags -->
     <title>CloudFace AI - AI-Powered Face Recognition & Photo Organization App</title>
     <meta name="title" content="CloudFace AI - AI-Powered Face Recognition & Photo Organization App">
-    <meta name="description" content="Find anyone in your photos instantly with AI-powered face recognition. Organize photos across Google Drive with privacy-first technology. Upload a selfie and discover every photo of that person.">
+    <meta name="description" content="Find anyone in your photos instantly with AI-powered face recognition. Organize photos across Google Drive with privacy-first technology. Upload a selfie and discover every photo.">
     <meta name="keywords" content="face recognition, AI photo organization, Google Drive photos, photo search, facial recognition software, photo management, AI photo finder, cloud photo organization">
     <meta name="author" content="CloudFace AI">
     <meta name="robots" content="index, follow">
@@ -707,7 +707,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                             My Photos
                         </a>
                         <a href="/about">About</a>
-                        <a href="/video-app">Video Search</a>
+                        <a href="/video-app">Video Search <span class="beta-badge">BETA</span></a>
                         <a href="/blog">Blog</a>
                         <a href="/pricing">Pricing</a>
                         <a href="/how-it-works">How It Works</a>
@@ -3086,6 +3086,19 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         color: #6c757d;
         font-size: 12px;
         margin-top: 4px;
+    }
+
+    .beta-badge {
+        background: linear-gradient(135deg, #ff6b35, #f7931e);
+        color: white;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 8px;
+        margin-left: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
     }
 
     .threshold-option small {
