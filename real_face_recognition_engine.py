@@ -18,14 +18,14 @@ try:
     INSIGHTFACE_AVAILABLE = True
 except ImportError:
     INSIGHTFACE_AVAILABLE = False
-    print("⚠️  InsightFace not installed. Install with: pip install insightface")
+    print("WARNING: InsightFace not installed. Install with: pip install insightface")
 
 try:
     import faiss
     FAISS_AVAILABLE = True
 except ImportError:
     FAISS_AVAILABLE = False
-    print("⚠️  FAISS not installed. Install with: pip install faiss-cpu")
+    print("WARNING: FAISS not installed. Install with: pip install faiss-cpu")
 
 logger = logging.getLogger(__name__)
 
@@ -52,15 +52,15 @@ class RealFaceRecognitionEngine:
             return
         
         try:
-            print("🔍 Initializing RetinaFace detection + ArcFace embeddings...")
+            print("INFO: Initializing RetinaFace detection + ArcFace embeddings...")
             
             # Initialize InsightFace app with RetinaFace + ArcFace
             self.app = FaceAnalysis(providers=['CPUExecutionProvider'])
             self.app.prepare(ctx_id=0, det_size=(640, 640))
             
-            print("✅ Real face recognition models loaded!")
-            print("  🔍 RetinaFace: State-of-the-art face detection")
-            print("  🧠 ArcFace: MS-Celeb-1M trained embeddings")
+            print("SUCCESS: Real face recognition models loaded!")
+            print("  INFO: RetinaFace: State-of-the-art face detection")
+            print("  INFO: ArcFace: MS-Celeb-1M trained embeddings")
             
         except Exception as e:
             logger.error(f"Failed to initialize InsightFace: {e}")

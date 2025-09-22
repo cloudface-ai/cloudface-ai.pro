@@ -23,14 +23,14 @@ try:
     INSIGHTFACE_AVAILABLE = True
 except ImportError:
     INSIGHTFACE_AVAILABLE = False
-    print("⚠️  InsightFace not installed. Install with: pip install insightface")
+    print("WARNING: InsightFace not installed. Install with: pip install insightface")
 
 try:
     import faiss
     FAISS_AVAILABLE = True
 except ImportError:
     FAISS_AVAILABLE = False
-    print("⚠️  FAISS not installed. Install with: pip install faiss-cpu")
+    print("WARNING: FAISS not installed. Install with: pip install faiss-cpu")
 
 logger = logging.getLogger(__name__)
 

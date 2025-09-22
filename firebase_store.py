@@ -43,7 +43,7 @@ def initialize_firebase():
             cred = credentials.Certificate(credentials_path)
             firebase_admin.initialize_app(cred)
             db = firestore.client()
-            print("✅ Firebase Firestore client ready (JSON credentials)")
+            print("SUCCESS: Firebase Firestore client ready (JSON credentials)")
             return db
         
         # Fallback to environment variables
@@ -57,11 +57,11 @@ def initialize_firebase():
         # This will use the environment variables for authentication
         firebase_admin.initialize_app()
         db = firestore.client()
-        print("✅ Firebase Firestore client ready (environment variables)")
+        print("SUCCESS: Firebase Firestore client ready (environment variables)")
         return db
 
     except Exception as e:
-        print(f"❌ Firebase init failed: {e}")
+        print(f"ERROR: Firebase init failed: {e}")
         return None
 
 # Initialize on import
