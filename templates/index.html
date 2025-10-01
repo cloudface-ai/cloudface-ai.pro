@@ -1864,7 +1864,8 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
             // Send files to backend
             fetch('/process_local', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'same-origin'
             })
             .then(response => {
                 console.log('📡 Response status:', response.status);
@@ -1926,6 +1927,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     drive_url: driveUrl,
                     force_reprocess: forceReprocess,
@@ -1994,7 +1996,8 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
             // Send request to backend
             fetch('/search', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'same-origin'
             })
             .then(response => {
                 console.log('🔍 Raw response:', response);
@@ -2085,7 +2088,8 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
             // Send request to backend
             fetch('/search', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'same-origin'
             })
             .then(response => {
                 console.log('🔍 Raw response:', response);
