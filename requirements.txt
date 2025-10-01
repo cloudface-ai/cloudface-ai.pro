@@ -26,7 +26,7 @@ onnxruntime==1.20.1
 deepface==0.0.79
 
 # MediaPipe for face alignment
-mediapipe==0.10.8
+mediapipe
 
 # Database and storage
 firebase-admin==6.2.0
