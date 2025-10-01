@@ -2378,15 +2378,15 @@ def download_video_segment():
         print(f"❌ Error downloading video segment: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/robots.txt')
-def robots_txt():
-    """Serve robots.txt file"""
-    return send_file('robots.txt', mimetype='text/plain')
-
 @app.route('/sitemap.xml')
 def sitemap_xml():
     """Serve sitemap.xml file"""
     return send_file('sitemap.xml', mimetype='application/xml')
+
+@app.route('/robots.txt')
+def robots_txt():
+    """Serve robots.txt file"""
+    return send_file('robots.txt', mimetype='text/plain')
 
 if __name__ == '__main__':
     # Get port from environment variable (for Railway) or use default
