@@ -324,6 +324,13 @@ app = Flask(__name__)
 # Load secret key from environment variable (more secure)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-change-in-production-' + str(uuid.uuid4()))
 
+# Session configuration for persistent login
+from datetime import timedelta
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['SESSION_COOKIE_SECURE'] = True  # Required for HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 # Add progress tracking endpoints (if available)
 if create_progress_endpoint:
     create_progress_endpoint(app)
@@ -1126,6 +1133,7 @@ def google_callback():
         user_info = user_response.json()
         
         # Store in session
+        session.permanent = True  # Make session last 30 days
         session['access_token'] = tokens['access_token']
         session['refresh_token'] = tokens.get('refresh_token')
         session['user_info'] = user_info
