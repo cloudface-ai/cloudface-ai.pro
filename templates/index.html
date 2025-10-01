@@ -92,17 +92,18 @@
     
     <!-- Service Worker Registration -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then((registration) => {
-                        console.log('SW registered: ', registration);
-                    })
-                    .catch((registrationError) => {
-                        console.log('SW registration failed: ', registrationError);
-                    });
-            });
-        }
+        // Service Worker registration disabled - sw.js not available
+        // if ('serviceWorker' in navigator) {
+        //     window.addEventListener('load', () => {
+        //         navigator.serviceWorker.register('/sw.js')
+        //             .then((registration) => {
+        //                 console.log('SW registered: ', registration);
+        //             })
+        //             .catch((registrationError) => {
+        //                 console.log('SW registration failed: ', registrationError);
+        //             });
+        //     });
+        // }
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -3397,7 +3398,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         hide: hideProgressBar,
         start: startProgressTracking,
         stop: stopProgressTracking,
-        test: testProgressBar
+        test: function() { console.log('ProgressBar test function called'); }
     };
 
     // Add event listener for progress close button

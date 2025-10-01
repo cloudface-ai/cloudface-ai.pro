@@ -109,12 +109,12 @@ class RealDriveProcessor:
             
             # Create local download directory
             import os
-            download_dir = f"storage/downloads/{user_id}_{folder_id}"
+            download_dir = os.path.join("storage", "downloads", f"{user_id}_{folder_id}")
             os.makedirs(download_dir, exist_ok=True)
-            print(f"📁 Created download directory: {download_dir}")
+            print(f"INFO: Created download directory: {download_dir}")
             
             # Phase 1: Download all images to local storage using batch downloader
-            print("📥 Phase 1: Downloading images to local storage (with caching)...")
+            print("INFO: Phase 1: Downloading images to local storage (with caching)...")
             progress_tracker.set_status('download', 'Downloading images to local storage...')
             
             # Initialize batch downloader with caching

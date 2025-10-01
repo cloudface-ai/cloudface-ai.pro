@@ -25,7 +25,7 @@ class BatchDownloader:
             # Check cache or permanent storage first
             cached_path = self.cache.get_cached_file_path(file_info, user_id)
             if cached_path and os.path.exists(cached_path):
-                print(f"✅ Using cached/permanent file: {file_info.get('name', 'Unknown')}")
+                print(f"SUCCESS: Using cached/permanent file: {file_info.get('name', 'Unknown')}")
                 self.download_stats['cached_files'] += 1
                 return {
                     'file_info': file_info,
@@ -45,7 +45,7 @@ class BatchDownloader:
             headers = {'Authorization': f'Bearer {access_token}'}
             
             import requests
-            response = requests.get(download_url, headers=headers, stream=True)
+            response = requests.get(download_url, headers=headers, stream=True, timeout=30)
             response.raise_for_status()
             
             # Save file
@@ -53,19 +53,44 @@ class BatchDownloader:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
             
-            # Compress image if larger than 5MB for faster processing
+            # Ensure file handle is fully closed and Windows releases the lock
+            import time
+            import gc
+            gc.collect()  # Force garbage collection
+            time.sleep(2.0)  # Increased delay for Windows file locking
+            
+            # Try compression with better error handling
             original_size = os.path.getsize(local_file_path)
             if original_size > 5 * 1024 * 1024:  # 5MB threshold
-                compressed_path = self._compress_image(local_file_path, original_size)
-                if compressed_path:
-                    local_file_path = compressed_path
+                try:
+                    # Wait longer for Windows to release the file
+                    time.sleep(3.0)  # Increased wait time
+                    
+                    # Check if file is accessible before compression
+                    with open(local_file_path, 'rb') as test_file:
+                        test_file.read(1)  # Try to read 1 byte
+                    
+                    # File is accessible, try compression
+                    compressed_path = self._compress_image(local_file_path, original_size)
+                    if compressed_path and compressed_path != local_file_path:
+                        local_file_path = compressed_path
+                        print(f"SUCCESS: Compressed {file_name} ({original_size / (1024*1024):.1f}MB)")
+                    else:
+                        print(f"INFO: Kept original size for {file_name} ({original_size / (1024*1024):.1f}MB)")
+                        
+                except (PermissionError, IOError) as e:
+                    print(f"WARNING: Could not compress {file_name} - {e}")
+                    print(f"INFO: Keeping original file ({original_size / (1024*1024):.1f}MB)")
+                except Exception as e:
+                    print(f"WARNING: Compression error for {file_name}: {e}")
+                    print(f"INFO: Keeping original file ({original_size / (1024*1024):.1f}MB)")
             
             # Cache the file (compressed version if applicable)
             self.cache.cache_file(file_info, user_id, local_file_path)
             
             final_size = os.path.getsize(local_file_path)
             size_mb = final_size / (1024 * 1024)
-            print(f"⬇️ Downloaded: {file_name} ({size_mb:.1f}MB)")
+            print(f"DOWNLOADED: {file_name} ({size_mb:.1f}MB)")
             self.download_stats['downloaded_files'] += 1
             
             return {
@@ -75,7 +100,7 @@ class BatchDownloader:
             }
             
         except Exception as e:
-            print(f"❌ Failed to download {file_info.get('name', 'Unknown')}: {e}")
+            print(f"ERROR: Failed to download {file_info.get('name', 'Unknown')}: {e}")
             self.download_stats['failed_files'] += 1
             return None
     
@@ -84,8 +109,8 @@ class BatchDownloader:
         self.download_stats['start_time'] = time.time()
         self.download_stats['total_files'] = len(image_files)
         
-        print(f"🚀 Starting batch download of {len(image_files)} files")
-        print(f"📦 Batch size: {self.batch_size}, Max concurrent: {self.max_concurrent}")
+        print(f"INFO: Starting batch download of {len(image_files)} files")
+        print(f"INFO: Batch size: {self.batch_size}, Max concurrent: {self.max_concurrent}")
         
         downloaded_files = []
         
@@ -95,7 +120,7 @@ class BatchDownloader:
             batch_num = (i // self.batch_size) + 1
             total_batches = (len(image_files) + self.batch_size - 1) // self.batch_size
             
-            print(f"\n📦 Processing batch {batch_num}/{total_batches} ({len(batch)} files)")
+            print(f"\nINFO: Processing batch {batch_num}/{total_batches} ({len(batch)} files)")
             
             # Use ThreadPoolExecutor for concurrent downloads within batch
             with ThreadPoolExecutor(max_workers=self.max_concurrent) as executor:
@@ -108,14 +133,14 @@ class BatchDownloader:
                 # Collect results as they complete
                 for future in future_to_file:
                     try:
-                        result = future.result(timeout=60)  # 60 second timeout per file
+                        result = future.result(timeout=120)  # 120 second timeout per file
                         if result:
                             downloaded_files.append(result)
                             if progress_tracker:
                                 progress_tracker.increment('download')
                     except Exception as e:
                         file_info = future_to_file[future]
-                        print(f"❌ Batch download failed for {file_info.get('name', 'Unknown')}: {e}")
+                        print(f"ERROR: Batch download failed for {file_info.get('name', 'Unknown')}: {e}")
                         self.download_stats['failed_files'] += 1
             
             # Small delay between batches to avoid overwhelming the API
@@ -131,7 +156,7 @@ class BatchDownloader:
         """Print download statistics"""
         duration = self.download_stats['end_time'] - self.download_stats['start_time']
         
-        print(f"\n📊 Download Summary:")
+        print(f"\nINFO: Download Summary:")
         print(f"   Total files: {self.download_stats['total_files']}")
         print(f"   Cached files: {self.download_stats['cached_files']} (saved time!)")
         print(f"   Downloaded files: {self.download_stats['downloaded_files']}")
@@ -147,60 +172,96 @@ class BatchDownloader:
         try:
             from PIL import Image
             import os
+            import time
             
-            # Open image
-            with Image.open(image_path) as img:
-                # Convert to RGB if necessary
-                if img.mode in ('RGBA', 'P'):
-                    img = img.convert('RGB')
-                
-                # Simple reliable compression - always compress files >5MB
-                original_mb = original_size / (1024 * 1024)
-                
-                # Simple settings: resize to 2500px max, 88% quality
-                max_size = 2500
-                quality = 88
-                
-                # Resize if needed
-                if img.width > max_size or img.height > max_size:
-                    ratio = min(max_size / img.width, max_size / img.height)
-                    new_width = int(img.width * ratio)
-                    new_height = int(img.height * ratio)
-                    # Use compatible resampling filter
-                    try:
-                        resample_filter = Image.Resampling.LANCZOS
-                    except AttributeError:
-                        try:
-                            resample_filter = Image.LANCZOS
-                        except AttributeError:
-                            resample_filter = Image.ANTIALIAS
+            # Multiple safety checks for file accessibility
+            max_checks = 5
+            for check in range(max_checks):
+                try:
+                    # Test if file is accessible
+                    with open(image_path, 'rb') as f:
+                        f.read(1)  # Read first byte
+                    break  # File is accessible
+                except (PermissionError, IOError) as e:
+                    if check < max_checks - 1:
+                        print(f"File locked, waiting... (check {check + 1}/{max_checks})")
+                        time.sleep(1.0)
+                    else:
+                        print(f"File still locked after {max_checks} attempts, skipping compression")
+                        return image_path
+            
+            # Retry mechanism for file locking issues
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    # Open image
+                    with Image.open(image_path) as img:
+                        # Convert to RGB if necessary
+                        if img.mode in ('RGBA', 'P'):
+                            img = img.convert('RGB')
+                        
+                        # Simple reliable compression - always compress files >5MB
+                        original_mb = original_size / (1024 * 1024)
+                        
+                        # Simple settings: resize to 2500px max, 88% quality
+                        max_size = 2500
+                        quality = 88
+                        
+                        # Resize if needed
+                        if img.width > max_size or img.height > max_size:
+                            ratio = min(max_size / img.width, max_size / img.height)
+                            new_width = int(img.width * ratio)
+                            new_height = int(img.height * ratio)
+                            # Use compatible resampling filter
+                            try:
+                                resample_filter = Image.Resampling.LANCZOS
+                            except AttributeError:
+                                try:
+                                    resample_filter = Image.LANCZOS
+                                except AttributeError:
+                                    resample_filter = Image.ANTIALIAS
+                            
+                            img = img.resize((new_width, new_height), resample_filter)
+                        
+                        # Save compressed version with proper extension handling
+                        import os
+                        base_name = os.path.splitext(image_path)[0]
+                        extension = os.path.splitext(image_path)[1]
+                        compressed_path = f"{base_name}_compressed{extension}"
+                        img.save(compressed_path, 'JPEG', quality=quality, optimize=True)
+                        
+                        # Simple check: if compressed file is smaller, use it
+                        compressed_size = os.path.getsize(compressed_path)
+                        compressed_mb = compressed_size / (1024 * 1024)
+                        
+                        if compressed_size < original_size and compressed_size > 500000:  # At least 500KB
+                            # Good compression - use it
+                            os.remove(image_path)
+                            os.rename(compressed_path, image_path)
+                            
+                            reduction = ((original_size - compressed_size) / original_size) * 100
+                            print(f"Compressed: {reduction:.1f}% size reduction ({original_mb:.1f}MB -> {compressed_mb:.1f}MB)")
+                            return image_path
+                        else:
+                            # Keep original
+                            os.remove(compressed_path)
+                            print(f"Keeping original file ({original_mb:.1f}MB)")
+                            return image_path
                     
-                    img = img.resize((new_width, new_height), resample_filter)
-                
-                # Save compressed version
-                compressed_path = image_path.replace('.jpg', '_compressed.jpg')
-                img.save(compressed_path, 'JPEG', quality=quality, optimize=True)
-                
-                # Simple check: if compressed file is smaller, use it
-                compressed_size = os.path.getsize(compressed_path)
-                compressed_mb = compressed_size / (1024 * 1024)
-                
-                if compressed_size < original_size and compressed_size > 500000:  # At least 500KB
-                    # Good compression - use it
-                    os.remove(image_path)
-                    os.rename(compressed_path, image_path)
+                    # If we get here, compression succeeded
+                    break
                     
-                    reduction = ((original_size - compressed_size) / original_size) * 100
-                    print(f"🗜️ Compressed: {reduction:.1f}% size reduction ({original_mb:.1f}MB → {compressed_mb:.1f}MB)")
-                    return image_path
-                else:
-                    # Keep original
-                    os.remove(compressed_path)
-                    print(f"📄 Keeping original file ({original_mb:.1f}MB)")
-                    return image_path
-                    
+                except PermissionError as e:
+                    if attempt < max_retries - 1:
+                        print(f"File locked, retrying in 1 second... (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(1.0)  # Wait 1 second before retry
+                        continue
+                    else:
+                        print(f"Compression failed after {max_retries} attempts: {e}")
+                        return image_path
+                        
         except Exception as e:
-            print(f"⚠️ Compression failed: {e}")
+            print(f"Compression failed: {e}")
             return image_path  # Return original if compression fails
     
     def get_cache_stats(self):

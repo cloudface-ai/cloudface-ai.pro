@@ -322,7 +322,12 @@ def get_user_learning_stats(user_id: str) -> dict:
 
 app = Flask(__name__)
 # Load secret key from environment variable (more secure)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-change-in-production-' + str(uuid.uuid4()))
+# Use a fixed secret key to prevent session invalidation on server restart
+app.secret_key = os.environ.get('SECRET_KEY', 'cloudface-ai-secret-key-2024-stable-session-persistence')
+
+# Configure session to be more persistent
+from datetime import timedelta
+app.permanent_session_lifetime = timedelta(hours=24)  # Sessions last 24 hours
 
 # Add progress tracking endpoints (if available)
 if create_progress_endpoint:
@@ -1125,14 +1130,19 @@ def google_callback():
         
         user_info = user_response.json()
         
-        # Store in session
+        # Store in session with debugging
         session['access_token'] = tokens['access_token']
         session['refresh_token'] = tokens.get('refresh_token')
         session['user_info'] = user_info
         session['user_id'] = user_info['email']
         
-        print(f"✅ User authenticated: {user_info['email']}")
-        print(f"✅ Access token: {tokens['access_token'][:20]}...")
+        print(f"SUCCESS: User authenticated: {user_info['email']}")
+        print(f"SUCCESS: Access token stored: {tokens['access_token'][:20]}...")
+        print(f"SUCCESS: Session keys after login: {list(session.keys())}")
+        print(f"SUCCESS: Session permanent: {session.permanent}")
+        
+        # Make session permanent to prevent expiration
+        session.permanent = True
         
         # Redirect back to main page
         return redirect('/app')
@@ -1153,12 +1163,20 @@ def auth_status():
     if is_authenticated():
         return jsonify({
             'authenticated': True,
-            'user': session['user_info']
+            'user': session['user_info'],
+            'session_keys': list(session.keys()),
+            'user_id': session.get('user_id')
         })
     else:
         return jsonify({
             'authenticated': False,
-            'login_url': '/auth/login'
+            'login_url': '/auth/login',
+            'session_keys': list(session.keys()),
+            'debug_info': {
+                'access_token_present': 'access_token' in session,
+                'user_info_present': 'user_info' in session,
+                'user_id_present': 'user_id' in session
+            }
         })
 
 @app.route('/auth/refresh')
@@ -1261,9 +1279,23 @@ def process_local():
 def process_drive():
     """Process Google Drive folder - connects to your existing code"""
     try:
-        # Check authentication
-        if not is_authenticated():
-            return jsonify({'success': False, 'error': 'Not authenticated. Please sign in with Google first.'})
+        # Debug: Log session state
+        print(f"INFO: Process Drive Request - Session keys: {list(session.keys())}")
+        print(f"INFO: User ID in session: {session.get('user_id', 'NOT_FOUND')}")
+        print(f"INFO: Access token present: {'access_token' in session}")
+        print(f"INFO: User info present: {'user_info' in session}")
+        
+        # Check authentication with detailed logging
+        auth_check = is_authenticated()
+        print(f"INFO: Authentication check result: {auth_check}")
+        
+        if not auth_check:
+            # Try to get a valid token
+            valid_token = get_valid_access_token()
+            print(f"INFO: Valid token check: {valid_token is not None}")
+            
+            if not valid_token:
+                return jsonify({'success': False, 'error': 'Not authenticated. Please sign in with Google first.'})
         
         data = request.get_json()
         drive_url = data.get('drive_url')
