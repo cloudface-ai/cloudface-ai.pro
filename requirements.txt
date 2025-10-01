@@ -2,6 +2,7 @@
 flask==2.3.3
 python-dotenv==1.0.0
 requests==2.31.0
+aiohttp==3.9.1
 
 # Image processing
 Pillow==10.0.1
@@ -21,6 +22,7 @@ tensorflow==2.15.0
 # Face recognition models
 facenet-pytorch==2.5.3
 insightface==0.7.3
+onnxruntime==1.16.3
 deepface==0.0.79
 
 # MediaPipe for face alignment
@@ -33,9 +35,9 @@ firebase-admin==6.2.0
 razorpay==1.3.0
 
 # Utilities
-numpy==1.24.3
+numpy==1.26.4
 scikit-learn==1.3.0
 scipy==1.11.1
 
 # RAW image processing (optional)
-rawpy==0.18.1
+rawpy==0.25.1
