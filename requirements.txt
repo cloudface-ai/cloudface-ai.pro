@@ -16,7 +16,7 @@ faiss-cpu==1.9.0.post1
 
 # Deep learning frameworks
 torch==2.5.1
-torchvision==0.20.1
+torchvision==0.21.0
 tensorflow==2.18.0
 
 # Face recognition models
