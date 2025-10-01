@@ -27,7 +27,7 @@ class PricingManager:
         # Plan configurations
         self.plans = {
             PlanType.FREE: {
-                'name': 'Free',
+                'name': 'Starter',
                 'images': 500,
                 'videos': 0,
                 'price_inr': 0,
@@ -35,7 +35,7 @@ class PricingManager:
                 'features': ['Basic face recognition', 'Google Drive integration', 'Up to 500 images']
             },
             PlanType.STANDARD: {
-                'name': 'Standard',
+                'name': 'Personal',
                 'images': 20000,
                 'videos': 20,
                 'price_inr': 2399,
@@ -43,7 +43,7 @@ class PricingManager:
                 'features': ['Advanced face recognition', 'Video processing', 'Priority support', 'Smart caching']
             },
             PlanType.PRO: {
-                'name': 'Pro',
+                'name': 'Professional',
                 'images': 50000,
                 'videos': 50,
                 'price_inr': 3399,
@@ -51,7 +51,7 @@ class PricingManager:
                 'features': ['Professional accuracy', 'Bulk processing', 'API access', 'Custom thresholds']
             },
             PlanType.PRO_PLUS: {
-                'name': 'Pro Plus',
+                'name': 'Business',
                 'images': 100000,
                 'videos': 100,
                 'price_inr': 5999,
@@ -59,7 +59,7 @@ class PricingManager:
                 'features': ['Enterprise features', 'Unlimited folders', 'Advanced analytics', 'White-label option']
             },
             PlanType.EVERYTHING: {
-                'name': 'Everything',
+                'name': 'Premium',
                 'images': 250000,
                 'videos': 250,
                 'price_inr': 11999,
@@ -107,7 +107,7 @@ class PricingManager:
         plan_data = {
             'user_id': user_id,
             'plan_type': PlanType.FREE.value,
-            'plan_name': 'Free',
+            'plan_name': 'Starter',
             'created_at': datetime.now().isoformat(),
             'expires_at': None,  # Free plan doesn't expire
             'usage': {
@@ -207,13 +207,13 @@ class PricingManager:
     def _downgrade_to_free(self, user_id: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """Downgrade expired user to free plan"""
         user_data['plan_type'] = PlanType.FREE.value
-        user_data['plan_name'] = 'Free'
+        user_data['plan_name'] = 'Starter'
         user_data['expires_at'] = None
         user_data['limits'] = self.plans[PlanType.FREE].copy()
         user_data['downgraded_at'] = datetime.now().isoformat()
         
         self._save_user_plan(user_id, user_data)
-        print(f"⬇️ Downgraded expired user {user_id} to free plan")
+        print(f"⬇️ Downgraded expired user {user_id} to Starter plan")
         return user_data
     
     def get_all_plans(self, currency: str = 'inr') -> Dict[str, Any]:
@@ -304,11 +304,12 @@ class PricingManager:
         }
     
     def make_user_pro(self, user_id: str) -> bool:
-        """Quick function to make a user Pro for testing"""
+        """Quick function to make a user Professional for testing"""
         try:
             user_plan = {
+                'user_id': user_id,
                 'plan_type': PlanType.PRO.value,
-                'name': 'Pro',
+                'plan_name': 'Professional',
                 'created_at': datetime.now().isoformat(),
                 'expires_at': (datetime.now() + timedelta(days=365)).isoformat(),  # 1 year
                 'payment_info': {
@@ -330,7 +331,7 @@ class PricingManager:
             with open(user_file, 'w') as f:
                 json.dump(user_plan, f, indent=2)
             
-            print(f"✅ User {user_id} upgraded to Pro plan (50,000 images)")
+            print(f"✅ User {user_id} upgraded to Professional plan (50,000 images)")
             return True
             
         except Exception as e:

@@ -329,6 +329,13 @@ app.secret_key = os.environ.get('SECRET_KEY', 'cloudface-ai-secret-key-2024-stab
 from datetime import timedelta
 app.permanent_session_lifetime = timedelta(hours=24)  # Sessions last 24 hours
 
+# Session configuration for persistent login
+from datetime import timedelta
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['SESSION_COOKIE_SECURE'] = True  # Required for HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 # Add progress tracking endpoints (if available)
 if create_progress_endpoint:
     create_progress_endpoint(app)
@@ -448,7 +455,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'heic'}
 
 # Google OAuth Configuration
 from dotenv import load_dotenv
-load_dotenv('example.env')
+load_dotenv('.env')
 
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
@@ -1131,6 +1138,7 @@ def google_callback():
         user_info = user_response.json()
         
         # Store in session with debugging
+        session.permanent = True  # Make session last 30 days
         session['access_token'] = tokens['access_token']
         session['refresh_token'] = tokens.get('refresh_token')
         session['user_info'] = user_info
@@ -2410,15 +2418,15 @@ def download_video_segment():
         print(f"❌ Error downloading video segment: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/robots.txt')
-def robots_txt():
-    """Serve robots.txt file"""
-    return send_file('robots.txt', mimetype='text/plain')
-
 @app.route('/sitemap.xml')
 def sitemap_xml():
     """Serve sitemap.xml file"""
     return send_file('sitemap.xml', mimetype='application/xml')
+
+@app.route('/robots.txt')
+def robots_txt():
+    """Serve robots.txt file"""
+    return send_file('robots.txt', mimetype='text/plain')
 
 if __name__ == '__main__':
     # Get port from environment variable (for Railway) or use default
