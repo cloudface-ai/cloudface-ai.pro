@@ -1052,7 +1052,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         function startLocalProgressPolling() {
             // Poll for completion every 2 seconds
             const pollInterval = setInterval(() => {
-                fetch('/progress')
+                fetch('/progress', { credentials: 'same-origin' })
                     .then(response => response.json())
                     .then(data => {
                         console.log('📊 Local progress polling response:', data);
@@ -1534,7 +1534,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         });
         
         function checkAuthStatus() {
-            fetch('/auth/status')
+            fetch('/auth/status', { credentials: 'same-origin' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.authenticated) {
@@ -2235,6 +2235,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     photo_reference: photoPath,
                     similarity_score: similarityScore
@@ -2280,6 +2281,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     photo_reference: photoPath,
                     is_correct: isCorrect,
@@ -2348,7 +2350,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         }
 
         function loadLearningStats() {
-            fetch('/learning-stats')
+            fetch('/learning-stats', { credentials: 'same-origin' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.stats) {
@@ -2458,7 +2460,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
             
             // Process each photo and add to ZIP
             photoPaths.forEach((photoPath, index) => {
-                fetch(`/photo/${encodeURIComponent(photoPath)}`)
+                fetch(`/photo/${encodeURIComponent(photoPath)}`, { credentials: 'same-origin' })
                     .then(response => {
                         if (!response.ok) {
                             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
