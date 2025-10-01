@@ -56,3 +56,10 @@ Crawl-delay: 1
 
 # Sitemap location
 Sitemap: https://cloudface-ai.com/sitemap.xml
+
+# Additional search engine bots
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
