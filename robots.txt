@@ -51,8 +51,7 @@ Allow: /static/
 Allow: /manifest.json
 Allow: /sw.js
 
-# Crawl delay for respectful crawling
-Crawl-delay: 1
+# Note: Crawl-delay is not supported by Google
 
 # Sitemap location
 Sitemap: https://cloudface-ai.com/sitemap.xml

@@ -352,7 +352,7 @@ else:
         def generate():
             last_progress = None
             connection_count = 0
-            max_connections = 600  # 10 minutes at 1 second intervals
+            max_connections = 3600  # 60 minutes at 1 second intervals (for large folders)
             error_count = 0
             max_errors = 5
             

@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from local_cache import LocalCache
 
 class BatchDownloader:
-    def __init__(self, batch_size=7, max_concurrent=3):
+    def __init__(self, batch_size=5, max_concurrent=1):
         self.batch_size = batch_size
         self.max_concurrent = max_concurrent
         self.cache = LocalCache()
@@ -45,7 +45,7 @@ class BatchDownloader:
             headers = {'Authorization': f'Bearer {access_token}'}
             
             import requests
-            response = requests.get(download_url, headers=headers, stream=True, timeout=30)
+            response = requests.get(download_url, headers=headers, stream=True, timeout=120)
             response.raise_for_status()
             
             # Save file
@@ -57,33 +57,45 @@ class BatchDownloader:
             import time
             import gc
             gc.collect()  # Force garbage collection
-            time.sleep(2.0)  # Increased delay for Windows file locking
+            time.sleep(0.5)  # Minimal delay since no compression
             
-            # Try compression with better error handling
+            # Try compression with improved Windows file locking handling
             original_size = os.path.getsize(local_file_path)
             if original_size > 5 * 1024 * 1024:  # 5MB threshold
-                try:
-                    # Wait longer for Windows to release the file
-                    time.sleep(3.0)  # Increased wait time
-                    
-                    # Check if file is accessible before compression
-                    with open(local_file_path, 'rb') as test_file:
-                        test_file.read(1)  # Try to read 1 byte
-                    
-                    # File is accessible, try compression
-                    compressed_path = self._compress_image(local_file_path, original_size)
-                    if compressed_path and compressed_path != local_file_path:
-                        local_file_path = compressed_path
-                        print(f"SUCCESS: Compressed {file_name} ({original_size / (1024*1024):.1f}MB)")
-                    else:
-                        print(f"INFO: Kept original size for {file_name} ({original_size / (1024*1024):.1f}MB)")
+                compressed_path = None
+                
+                # Try compression with multiple retry attempts
+                for attempt in range(3):
+                    try:
+                        # Wait for Windows to release the file lock
+                        time.sleep(1.0 + attempt * 0.5)  # Shorter delays
                         
-                except (PermissionError, IOError) as e:
-                    print(f"WARNING: Could not compress {file_name} - {e}")
-                    print(f"INFO: Keeping original file ({original_size / (1024*1024):.1f}MB)")
-                except Exception as e:
-                    print(f"WARNING: Compression error for {file_name}: {e}")
-                    print(f"INFO: Keeping original file ({original_size / (1024*1024):.1f}MB)")
+                        # Check if file is accessible before compression
+                        with open(local_file_path, 'rb') as test_file:
+                            test_file.read(1)  # Try to read 1 byte
+                        
+                        # File is accessible, try compression
+                        compressed_path = self._compress_image(local_file_path, original_size)
+                        if compressed_path and compressed_path != local_file_path:
+                            local_file_path = compressed_path
+                            print(f"SUCCESS: Compressed {file_name} ({original_size / (1024*1024):.1f}MB)")
+                            break  # Success, exit retry loop
+                        else:
+                            print(f"INFO: Kept original size for {file_name} ({original_size / (1024*1024):.1f}MB)")
+                            break  # No compression needed, exit retry loop
+                            
+                    except (PermissionError, IOError) as e:
+                        if attempt == 2:  # Last attempt
+                            print(f"WARNING: Could not compress {file_name} after 3 attempts - {e}")
+                            print(f"INFO: Keeping original file ({original_size / (1024*1024):.1f}MB)")
+                        else:
+                            print(f"File locked, retrying in {1.0 + attempt * 0.5} seconds... (attempt {attempt + 1}/3)")
+                    except Exception as e:
+                        if attempt == 2:  # Last attempt
+                            print(f"WARNING: Compression error for {file_name}: {e}")
+                            print(f"INFO: Keeping original file ({original_size / (1024*1024):.1f}MB)")
+                        else:
+                            print(f"Compression error, retrying in {1.0 + attempt * 0.5} seconds... (attempt {attempt + 1}/3)")
             
             # Cache the file (compressed version if applicable)
             self.cache.cache_file(file_info, user_id, local_file_path)
@@ -123,6 +135,7 @@ class BatchDownloader:
             print(f"\nINFO: Processing batch {batch_num}/{total_batches} ({len(batch)} files)")
             
             # Use ThreadPoolExecutor for concurrent downloads within batch
+            # Reduced concurrency to prevent Windows file locking issues
             with ThreadPoolExecutor(max_workers=self.max_concurrent) as executor:
                 # Submit all files in current batch
                 future_to_file = {
@@ -143,9 +156,9 @@ class BatchDownloader:
                         print(f"ERROR: Batch download failed for {file_info.get('name', 'Unknown')}: {e}")
                         self.download_stats['failed_files'] += 1
             
-            # Small delay between batches to avoid overwhelming the API
-            if i + self.batch_size < len(image_files):
-                time.sleep(0.5)
+            # Small delay between batches to prevent file locking conflicts on Windows
+            if batch_num < total_batches:  # Don't delay after the last batch
+                time.sleep(2.0)  # Increased delay for smaller batches to ensure file locks are released
         
         self.download_stats['end_time'] = time.time()
         self._print_download_summary()
@@ -225,26 +238,43 @@ class BatchDownloader:
                         
                         # Save compressed version with proper extension handling
                         import os
-                        base_name = os.path.splitext(image_path)[0]
-                        extension = os.path.splitext(image_path)[1]
-                        compressed_path = f"{base_name}_compressed{extension}"
-                        img.save(compressed_path, 'JPEG', quality=quality, optimize=True)
+                        import tempfile
+                        
+                        # Use temp file to avoid file locking issues
+                        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+                            temp_path = temp_file.name
+                        
+                        img.save(temp_path, 'JPEG', quality=quality, optimize=True)
                         
                         # Simple check: if compressed file is smaller, use it
-                        compressed_size = os.path.getsize(compressed_path)
+                        compressed_size = os.path.getsize(temp_path)
                         compressed_mb = compressed_size / (1024 * 1024)
                         
                         if compressed_size < original_size and compressed_size > 500000:  # At least 500KB
-                            # Good compression - use it
-                            os.remove(image_path)
-                            os.rename(compressed_path, image_path)
-                            
-                            reduction = ((original_size - compressed_size) / original_size) * 100
-                            print(f"Compressed: {reduction:.1f}% size reduction ({original_mb:.1f}MB -> {compressed_mb:.1f}MB)")
-                            return image_path
+                            # Good compression - replace original safely
+                            try:
+                                # Copy compressed file over original (safer than rename)
+                                import shutil
+                                shutil.copy2(temp_path, image_path)
+                                os.unlink(temp_path)  # Remove temp file
+                                
+                                reduction = ((original_size - compressed_size) / original_size) * 100
+                                print(f"Compressed: {reduction:.1f}% size reduction ({original_mb:.1f}MB -> {compressed_mb:.1f}MB)")
+                                return image_path
+                            except Exception as e:
+                                # If copy fails, clean up temp and keep original
+                                try:
+                                    os.unlink(temp_path)
+                                except:
+                                    pass
+                                print(f"Compression failed during copy: {e}")
+                                return image_path
                         else:
-                            # Keep original
-                            os.remove(compressed_path)
+                            # Keep original, clean up temp
+                            try:
+                                os.unlink(temp_path)
+                            except:
+                                pass
                             print(f"Keeping original file ({original_mb:.1f}MB)")
                             return image_path
                     

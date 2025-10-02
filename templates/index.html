@@ -1115,7 +1115,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 }, 3000);
                 
                 stopProgressTracking();
-            }, 300000); // 5 minutes timeout
+            }, 1800000); // 30 minutes timeout (for large folders like 589 files)
             
             // Start new SSE connection
             window.progressEventSource = new EventSource('/progress/stream');
@@ -1437,6 +1437,18 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                 lockLocalFolder(true);
                 // Show clear button for Drive URL
                 document.getElementById('clearDriveBtn').style.display = 'inline-block';
+                
+                // Auto-scroll to Process Photos button when URL is pasted
+                setTimeout(() => {
+                    const processBtn = document.querySelector('button[onclick="processPhotos()"]');
+                    if (processBtn) {
+                        processBtn.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                        console.log('📜 Auto-scrolled to Process Photos button');
+                    }
+                }, 100); // Small delay to ensure UI is updated
             } else {
                 // Drive URL cleared - enable local folder
                 console.log('🔓 Unlocking local folder');

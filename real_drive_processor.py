@@ -118,7 +118,7 @@ class RealDriveProcessor:
             progress_tracker.set_status('download', 'Downloading images to local storage...')
             
             # Initialize batch downloader with caching
-            batch_downloader = BatchDownloader(batch_size=15, max_concurrent=6)
+            batch_downloader = BatchDownloader(batch_size=5, max_concurrent=1)
             
             # Pre-filter: reuse permanently stored files to avoid re-downloads
             reused_files = []

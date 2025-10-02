@@ -527,6 +527,7 @@ def get_real_engine():
     """Get or create the real face recognition engine."""
     global real_engine
     if real_engine is None:
+        print("🚀 Initializing face recognition engine (first time only)...")
         real_engine = RealFaceRecognitionEngine()
         # Load existing FAISS database if available
         try:
@@ -534,6 +535,7 @@ def get_real_engine():
             print(f"🔍 FAISS database loaded with {real_engine.faiss_index.ntotal if real_engine.faiss_index else 0} faces")
         except Exception as e:
             print(f"⚠️  Could not load FAISS database: {e}")
+        print("✅ Face recognition engine ready!")
     return real_engine
 
 def process_image_with_real_recognition(image_path: str, person_id: str, user_id: str, folder_id: str) -> Dict[str, Any]:
