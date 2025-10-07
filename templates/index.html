@@ -1543,6 +1543,33 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
         // Check authentication status when page loads
         document.addEventListener('DOMContentLoaded', function() {
             checkAuthStatus();
+            
+            // Auto-process feature: Check for auto_drive URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoDriveUrl = urlParams.get('auto_drive');
+            
+            if (autoDriveUrl) {
+                console.log('🚀 Auto-process mode detected:', autoDriveUrl);
+                
+                // Auto-fill the Drive URL field
+                const driveInput = document.getElementById('driveUrl');
+                if (driveInput) {
+                    driveInput.value = autoDriveUrl;
+                    console.log('✅ Drive URL auto-filled');
+                    
+                    // Wait for authentication check to complete, then auto-start
+                    setTimeout(() => {
+                        const authSection = document.getElementById('authenticated');
+                        if (authSection && authSection.style.display === 'block') {
+                            console.log('✅ User authenticated, starting auto-process');
+                            showStatus('processStatus', '🚀 Auto-processing your photos...', 'info');
+                            processPhotos();
+                        } else {
+                            console.log('⚠️ User not authenticated yet, waiting for login');
+                        }
+                    }, 2000);
+                }
+            }
         });
         
         function checkAuthStatus() {

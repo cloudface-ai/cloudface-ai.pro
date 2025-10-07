@@ -1152,8 +1152,11 @@ def google_callback():
         # Make session permanent to prevent expiration
         session.permanent = True
         
-        # Redirect back to main page
-        return redirect('/app')
+        # Check for return URL in session (from auto-process flow)
+        return_url = session.pop('return_after_auth', '/app')
+        
+        # Redirect back
+        return redirect(return_url)
         
     except Exception as e:
         print(f"❌ OAuth callback error: {e}")
@@ -2427,6 +2430,71 @@ def sitemap_xml():
 def robots_txt():
     """Serve robots.txt file"""
     return send_file('robots.txt', mimetype='text/plain')
+
+@app.route('/auto-process')
+def auto_process():
+    """Auto-process route with beautiful welcome page"""
+    drive_url = request.args.get('drive', '')
+    event_name = request.args.get('event', '')
+    event_date = request.args.get('date', '')
+    
+    # Show welcome page with event info
+    return render_template('auto_process_welcome.html', 
+                          drive_url=drive_url,
+                          event_name=event_name,
+                          event_date=event_date)
+
+@app.route('/admin/link-generator')
+def admin_link_generator():
+    """Admin page to generate shareable auto-process links"""
+    return render_template('admin_link_generator.html')
+
+@app.route('/store-return-url', methods=['POST'])
+def store_return_url():
+    """Store return URL in session for after authentication"""
+    try:
+        data = request.get_json()
+        return_url = data.get('return_url', '/app')
+        session['return_after_auth'] = return_url
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/upload-logo', methods=['POST'])
+def upload_logo():
+    """Upload company logo and return filename"""
+    try:
+        if 'logo' not in request.files:
+            return jsonify({'success': False, 'error': 'No logo file provided'})
+        
+        logo_file = request.files['logo']
+        if logo_file.filename == '':
+            return jsonify({'success': False, 'error': 'No logo file selected'})
+        
+        # Validate file type
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+        if not ('.' in logo_file.filename and 
+                logo_file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+            return jsonify({'success': False, 'error': 'Invalid file type. Only PNG, JPG, JPEG, and GIF are allowed.'})
+        
+        # Create logos directory if it doesn't exist
+        logos_dir = os.path.join('static', 'logos')
+        os.makedirs(logos_dir, exist_ok=True)
+        
+        # Generate unique filename
+        import uuid
+        file_extension = logo_file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{uuid.uuid4().hex}.{file_extension}"
+        filepath = os.path.join(logos_dir, filename)
+        
+        # Save file
+        logo_file.save(filepath)
+        
+        return jsonify({'success': True, 'filename': filename})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 
 if __name__ == '__main__':
     # Get port from environment variable (for Railway) or use default

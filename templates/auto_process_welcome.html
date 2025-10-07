@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ event_name or 'Find Your Photos' }} - CloudFace AI</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a73e8;
+            --primary-light: #4285f4;
+            --primary-dark: #0d47a1;
+            --accent: #ea4335;
+            --accent-light: #f28b82;
+            --success: #34a853;
+            --warning: #fbbc04;
+            --bg: #fafafa;
+            --surface: #fff;
+            --text-primary: #202124;
+            --text-secondary: #5f6368;
+            --text-tertiary: #9aa0a6;
+            --border: #dadce0;
+            --shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.24);
+            --shadow-hover: 0 14px 28px rgba(0,0,0,.25), 0 10px 10px rgba(0,0,0,.22);
+            --radius: 16px;
+            --radius-sm: 8px;
+            --transition: all 0.2s ease;
+        }
+
+        body {
+            font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--text-primary);
+        }
+
+        .container {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-hover);
+            border: 1px solid var(--border);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo-img {
+            max-width: 80px;
+            margin-bottom: 15px;
+        }
+
+        .brand-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .event-badge {
+            background: rgba(255,255,255,0.2);
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .event-info {
+            background: var(--bg);
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: var(--radius-sm);
+        }
+
+        .event-info h2 {
+            color: var(--text-primary);
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .event-info .date {
+            color: var(--text-secondary);
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .features {
+            margin: 30px 0;
+        }
+
+        .feature {
+            display: flex;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+
+        .feature-icon {
+            font-size: 24px;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .feature-text h3 {
+            color: var(--text-primary);
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .feature-text p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .cta-button {
+            background: var(--primary);
+            color: white;
+            padding: 18px 40px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin: 20px 0;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .cta-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .cta-button:active {
+            transform: translateY(0);
+        }
+
+        .privacy-note {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .logo {
+            text-align: center;
+            margin-top: 20px;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .event-info h2 {
+                font-size: 20px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img id="companyLogo" src="/static/Cloudface-ai-logo.png" alt="Company Logo" class="logo-img">
+            <div class="brand-name" id="companyName">CloudFace AI</div>
+            <h1>📸 Find Your Photos!</h1>
+            <div class="event-badge" id="eventBadge">CloudFace AI Engine</div>
+        </div>
+
+        <div class="content">
+            {% if event_name or event_date %}
+            <div class="event-info">
+                {% if event_name %}
+                <h2>{{ event_name }}</h2>
+                {% endif %}
+                {% if event_date %}
+                <div class="date">📅 {{ event_date }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🎯</div>
+                    <div class="feature-text">
+                        <h3>Find Yourself Instantly</h3>
+                        <p>Upload a selfie and our AI will find all photos containing you</p>
+                    </div>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-text">
+                        <h3>Fast & Accurate</h3>
+                        <p>Advanced AI technology scans thousands of photos in minutes</p>
+                    </div>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">🔒</div>
+                    <div class="feature-text">
+                        <h3>100% Private</h3>
+                        <p>Your photos stay in Google Drive. We only analyze, never store</p>
+                    </div>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">💾</div>
+                    <div class="feature-text">
+                        <h3>Easy Download</h3>
+                        <p>Download all your photos in one click after finding them</p>
+                    </div>
+                </div>
+            </div>
+
+            <button class="cta-button" onclick="proceedToApp()">
+                ✨ Proceed to Find My Photos
+            </button>
+
+            <div class="privacy-note">
+                🔐 <strong>Privacy First:</strong> Your photos are never uploaded to our servers. 
+                All processing happens securely and your data remains private to you only.
+            </div>
+
+            <div class="logo">
+                <small style="color: #999;">CloudFace AI - Smart Photo Organization</small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load company branding from URL parameters
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const companyName = urlParams.get('company');
+            const companyLogo = urlParams.get('logo');
+            
+            // Update company name
+            if (companyName) {
+                document.getElementById('companyName').textContent = companyName;
+                document.getElementById('eventBadge').textContent = 'CloudFace AI Engine';
+            }
+            
+            // Update company logo
+            if (companyLogo) {
+                const logoImg = document.getElementById('companyLogo');
+                // If it's a filename (not base64), construct the full URL
+                if (!companyLogo.startsWith('data:')) {
+                    logoImg.src = `/static/logos/${companyLogo}`;
+                } else {
+                    logoImg.src = companyLogo;
+                }
+                logoImg.alt = companyName || 'Company Logo';
+                
+                // Handle logo load error
+                logoImg.onerror = function() {
+                    console.warn('Company logo failed to load, using default');
+                    this.src = '/static/Cloudface-ai-logo.png';
+                    this.alt = 'CloudFace AI';
+                };
+            }
+        });
+
+        function proceedToApp() {
+            // Build the app URL with parameters
+            let appUrl = '/app?auto_drive={{ drive_url|urlencode }}';
+            {% if event_name %}
+            appUrl += '&event={{ event_name|urlencode }}';
+            {% endif %}
+            {% if event_date %}
+            appUrl += '&date={{ event_date|urlencode }}';
+            {% endif %}
+            
+            // Add company branding parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const companyName = urlParams.get('company');
+            const companyLogo = urlParams.get('logo');
+            
+            if (companyName) {
+                appUrl += '&company=' + encodeURIComponent(companyName);
+            }
+            if (companyLogo) {
+                appUrl += '&logo=' + encodeURIComponent(companyLogo);
+            }
+            
+            // Check if user is authenticated
+            fetch('/auth/status', { credentials: 'same-origin' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.authenticated) {
+                        // Already logged in, go to app
+                        window.location.href = appUrl;
+                    } else {
+                        // Need to login first - store return URL in server session
+                        fetch('/store-return-url', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ return_url: appUrl })
+                        }).then(() => {
+                            window.location.href = '/auth/login';
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Auth check failed:', error);
+                    // Just go to login on error
+                    window.location.href = '/auth/login';
+                });
+        }
+    </script>
+</body>
+</html>
+

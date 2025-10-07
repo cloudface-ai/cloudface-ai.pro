@@ -289,3 +289,4 @@ dmypy.json
 
 # Pyre
 .pyre/
+production.env
