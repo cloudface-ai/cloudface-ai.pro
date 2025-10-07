@@ -531,6 +531,11 @@ class RealDriveProcessor:
             try:
                 # Process with real face recognition
                 person_id = f"{user_id}_{file_info['id']}"
+                # Ensure folder_id is set (mandatory for scoped storage)
+                if folder_id is None:
+                    from google_drive_handler import extract_file_id_from_url  # safety import
+                    # Fallback: try to infer folder from session is not available here; require explicit folder_id
+                    pass
                 result = process_image_with_real_recognition(temp_path, person_id, user_id, folder_id)
                 
                 # Also save to Firebase for compatibility

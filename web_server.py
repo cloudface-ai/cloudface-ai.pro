@@ -404,8 +404,9 @@ else:
                         
                         # Check if processing is complete
                         if current_overall >= 100:
-                            yield f"data: {json.dumps({'close': True, 'complete': True})}\n\n"
-                            break
+                            # Send single, final completion close
+                            yield f"data: {json.dumps({'complete': True})}\n\n"
+                            return
                         
                         # Check if processing is active
                         if progress_data.get('is_active', False):
@@ -434,12 +435,11 @@ else:
                         
                         time.sleep(2)  # Wait before retry
                 
-                # Send final close message
-                yield f"data: {json.dumps({'close': True, 'reason': 'timeout' if connection_count >= max_connections else 'errors'})}\n\n"
+                # Do not send a second close; stream ends naturally
                 
             except Exception as e:
                 print(f"❌ Fatal progress stream error: {e}")
-                yield f"data: {json.dumps({'error': f'Fatal error: {str(e)}', 'close': True})}\n\n"
+                yield f"data: {json.dumps({'error': f'Fatal error: {str(e)}'})}\n\n"
         
         response = Response(generate(), mimetype='text/event-stream')
         response.headers['Cache-Control'] = 'no-cache'
@@ -1393,13 +1393,8 @@ def process_drive():
                     max_depth=max_depth
                 )
                 
-                # Finalize progress for frontend: mark 100% and show completion message
+                # Finalize note: completion is handled inside the processor at the real end
                 try:
-                    try:
-                        from progress_tracker import complete_all_steps
-                    except ImportError:
-                        def complete_all_steps(*args, **kwargs): pass
-                    complete_all_steps()
                     update_folder_info(folder_path="Processing Done — Return to main screen")
                 except Exception:
                     pass

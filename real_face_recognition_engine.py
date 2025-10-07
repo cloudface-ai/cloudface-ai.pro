@@ -41,6 +41,11 @@ class RealFaceRecognitionEngine:
         self.faiss_index = None
         self.face_database = {}  # Store face metadata
         self.embedding_dim = 512  # ArcFace standard
+        # Current storage scope (multi-tenant isolation)
+        self.current_user_id: Optional[str] = None
+        self.current_folder_id: Optional[str] = None
+        # In-process locks per scope to avoid concurrent writes
+        self._scope_locks: Dict[Tuple[str, str], Any] = {}
         
         self._initialize_models()
         self._initialize_faiss()
@@ -73,15 +78,7 @@ class RealFaceRecognitionEngine:
             return
         
         try:
-            # Load existing index or create new one
-            index_path = "models/face_embeddings.index"
-            
-            if os.path.exists(index_path):
-                # Remove old corrupted index - need to rebuild with correct type
-                os.remove(index_path)
-                print("🗑️ Removed old corrupted FAISS index")
-                
-            # Create new FAISS index (compatible with FAISS 1.7.4)
+            # Always create a fresh in-memory index; persistence handled via save/load per scope
             self.faiss_index = faiss.IndexFlatIP(self.embedding_dim)
             print("✅ Created new FAISS index with inner product for 512D embeddings")
             
@@ -272,6 +269,42 @@ class RealFaceRecognitionEngine:
         except Exception as e:
             logger.error(f"Failed to add face to database: {e}")
             return False
+
+    # ===== Multi-tenant storage helpers =====
+    def set_scope(self, user_id: str, folder_id: str) -> None:
+        """Set active storage/search scope for this engine."""
+        self.current_user_id = user_id
+        self.current_folder_id = folder_id
+
+    def _ensure_scope(self) -> Tuple[str, str]:
+        if not self.current_user_id or not self.current_folder_id:
+            raise RuntimeError("Storage scope not set. Call set_scope(user_id, folder_id) before load/save/search.")
+        return self.current_user_id, self.current_folder_id
+
+    def _get_paths_for_scope(self) -> Tuple[str, str]:
+        user_id, folder_id = self._ensure_scope()
+        base_dir = os.path.join('models', user_id, folder_id)
+        os.makedirs(base_dir, exist_ok=True)
+        index_path = os.path.join(base_dir, 'face_embeddings.index')
+        metadata_path = os.path.join(base_dir, 'face_metadata.json')
+        return index_path, metadata_path
+
+    def _get_scope_lock(self):
+        user_id, folder_id = self._ensure_scope()
+        key = (user_id, folder_id)
+        if key not in self._scope_locks:
+            try:
+                import threading
+                self._scope_locks[key] = threading.Lock()
+            except Exception:
+                # Fallback dummy lock
+                class _NoLock:
+                    def __enter__(self_inner):
+                        return None
+                    def __exit__(self_inner, exc_type, exc, tb):
+                        return False
+                self._scope_locks[key] = _NoLock()
+        return self._scope_locks[key]
     
     def search_similar_faces(self, query_embedding: np.ndarray, user_id: str, folder_id: str,
                            k: int = None, threshold: float = 0.7) -> List[Dict[str, Any]]:
@@ -438,15 +471,17 @@ class RealFaceRecognitionEngine:
             return []
     
     def save_database(self):
-        """Save FAISS index and metadata to disk."""
+        """Save FAISS index and metadata to disk for current scope."""
         try:
-            if self.faiss_index is not None:
-                faiss.write_index(self.faiss_index, "models/face_embeddings.index")
-                
+            if self.faiss_index is None:
+                return False
+            index_path, metadata_path = self._get_paths_for_scope()
+            lock = self._get_scope_lock()
+            with lock:
+                faiss.write_index(self.faiss_index, index_path)
                 # Save metadata
                 import json
-                with open("models/face_metadata.json", "w") as f:
-                    # Convert numpy types to JSON serializable
+                with open(metadata_path, "w") as f:
                     serializable_db = {}
                     for k, v in self.face_database.items():
                         serializable_db[str(k)] = {
@@ -454,39 +489,36 @@ class RealFaceRecognitionEngine:
                             for key, val in v.items()
                         }
                     json.dump(serializable_db, f, indent=2)
-                
-                print(f"💾 Saved FAISS database with {self.faiss_index.ntotal} faces")
-                return True
-            
+            print(f"💾 Saved FAISS database with {self.faiss_index.ntotal} faces -> {index_path}")
+            return True
         except Exception as e:
             logger.error(f"Failed to save database: {e}")
             return False
     
     def load_database(self):
-        """Load FAISS index and metadata from disk."""
+        """Load FAISS index and metadata from disk for current scope."""
         try:
-            index_path = "models/face_embeddings.index"
-            metadata_path = "models/face_metadata.json"
-            
+            index_path, metadata_path = self._get_paths_for_scope()
             if os.path.exists(index_path):
                 self.faiss_index = faiss.read_index(index_path)
-                print(f"✅ Loaded FAISS index with {self.faiss_index.ntotal} faces")
-                
+                print(f"✅ Loaded FAISS index with {self.faiss_index.ntotal} faces from {index_path}")
                 # Load metadata
                 if os.path.exists(metadata_path):
                     import json
                     with open(metadata_path, "r") as f:
                         serializable_db = json.load(f)
-                    
-                    # Convert back to proper types
                     self.face_database = {}
                     for k, v in serializable_db.items():
                         self.face_database[int(k)] = v
-                    
                     print(f"✅ Loaded face metadata for {len(self.face_database)} faces")
-                
+                else:
+                    self.face_database = {}
                 return True
-            
+            else:
+                # Initialize empty structures for new scope
+                self.faiss_index = faiss.IndexFlatIP(self.embedding_dim)
+                self.face_database = {}
+                return True
         except Exception as e:
             logger.error(f"Failed to load database: {e}")
             return False
@@ -529,12 +561,7 @@ def get_real_engine():
     if real_engine is None:
         print("🚀 Initializing face recognition engine (first time only)...")
         real_engine = RealFaceRecognitionEngine()
-        # Load existing FAISS database if available
-        try:
-            real_engine.load_database()
-            print(f"🔍 FAISS database loaded with {real_engine.faiss_index.ntotal if real_engine.faiss_index else 0} faces")
-        except Exception as e:
-            print(f"⚠️  Could not load FAISS database: {e}")
+        # Do not auto-load any scope here; scope is set per user/folder by callers
         print("✅ Face recognition engine ready!")
     return real_engine
 
@@ -542,6 +569,9 @@ def process_image_with_real_recognition(image_path: str, person_id: str, user_id
     """Process image with real face recognition."""
     try:
         engine = get_real_engine()
+        # Ensure scoped storage is active for this operation
+        engine.set_scope(user_id, folder_id)
+        engine.load_database()
         
         # Load image
         image = cv2.imread(image_path)
@@ -560,7 +590,7 @@ def process_image_with_real_recognition(image_path: str, person_id: str, user_id
             if engine.add_face_to_database(face, person_id, user_id, folder_id):
                 added_count += 1
         
-        # Save database
+        # Save database to scoped paths
         engine.save_database()
         
         return {
@@ -578,6 +608,8 @@ def search_with_real_recognition(selfie_path: str, user_id: str, folder_id: str,
     """Search for faces using real face recognition - LEGACY: folder-specific search."""
     try:
         engine = get_real_engine()
+        engine.set_scope(user_id, folder_id)
+        engine.load_database()
         
         # Load selfie
         image = cv2.imread(selfie_path)
@@ -627,8 +659,29 @@ def search_with_real_recognition_universal(selfie_path: str, user_id: str, thres
         # Use first detected face for search
         query_embedding = faces[0]['embedding']
         
-        # Search FAISS database across ALL folders for this user
-        matches = engine.search_similar_faces_universal(query_embedding, user_id, k=None, threshold=threshold)
+        # Aggregate matches across all folder scopes for this user by loading each scoped index
+        all_matches = []
+        try:
+            user_models_dir = os.path.join('models', user_id)
+            if os.path.isdir(user_models_dir):
+                for folder_id in os.listdir(user_models_dir):
+                    folder_path = os.path.join(user_models_dir, folder_id)
+                    if not os.path.isdir(folder_path):
+                        continue
+                    try:
+                        engine.set_scope(user_id, folder_id)
+                        engine.load_database()
+                        folder_matches = engine.search_similar_faces(query_embedding, user_id, folder_id, k=None, threshold=threshold)
+                        for m in folder_matches:
+                            m['folder_id'] = folder_id
+                        all_matches.extend(folder_matches)
+                    except Exception as _e:
+                        print(f"⚠️  Skipping folder {folder_id} due to error: {_e}")
+        except Exception as _e:
+            print(f"⚠️  Universal aggregation error: {_e}")
+        # Sort aggregated matches by similarity desc
+        all_matches.sort(key=lambda x: x.get('similarity', 0), reverse=True)
+        matches = all_matches
         
         return {
             'success': True,
