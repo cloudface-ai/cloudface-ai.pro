@@ -51,6 +51,7 @@ class PaymentGateway:
                 'amount': amount_inr * 100,  # Razorpay expects paise
                 'currency': 'INR',
                 'receipt': f"cf_{int(time.time())}",  # Max 40 chars
+                'offers': ['offer_RRgv07DGCLEjlA'],  # Apply your 100% discount offer
                 'notes': {
                     'plan': plan_name,
                     'user_id': user_id,
