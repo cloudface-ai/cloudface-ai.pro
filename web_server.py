@@ -465,8 +465,8 @@ GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 GOOGLE_SCOPES = [
     'https://www.googleapis.com/auth/userinfo.profile',
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/drive.readonly'  # Added back for Drive folder access
+    'https://www.googleapis.com/auth/userinfo.email'
+    # Note: Drive scope removed - using public links instead
 ]
 
 # Ensure upload folder exists
@@ -1593,20 +1593,8 @@ def search():
         
         user_id = session['user_id']
         
-        # Check if this is a shared session
-        search_user_id = user_id
-        search_folder_id = None
-        
-        if 'shared_session_admin' in session and 'shared_session_folder' in session:
-            # Use admin's data for shared session
-            search_user_id = session['shared_session_admin']
-            search_folder_id = session['shared_session_folder']
-            print(f"🔗 Shared session active - searching admin's photos")
-            print(f"👤 Admin User ID: {search_user_id}")
-            print(f"📁 Folder ID: {search_folder_id}")
-        
         print(f"🔍 Searching for person with selfie: {file_path}")
-        print(f"👤 Search User ID: {search_user_id}")
+        print(f"👤 User ID: {user_id}")
         print(f"🎯 Using V2 pipeline for consistent 1024D embeddings")
         print(f"🔧 DEBUG: Starting search process...")
         
@@ -1634,8 +1622,8 @@ def search():
             print(f"🔧 DEBUG: Processing selfie with universal search...")
             from real_face_recognition_engine import search_with_real_recognition_universal
             
-            # Use universal search - if shared session, search admin's photos
-            search_result = search_with_real_recognition_universal(normalized_path, search_user_id, threshold)
+            # Use universal search across ALL user's photos (Drive + Uploaded)
+            search_result = search_with_real_recognition_universal(normalized_path, user_id, threshold)
             print(f"🔧 DEBUG: Universal search result: {search_result.get('total_matches', 0)} matches found")
             
             # Cache the search results so they appear in /my-photos
@@ -1810,8 +1798,14 @@ def serve_photo(filename):
         user_id = session['user_id']
         current_folder_id = session.get('current_folder_id')
         
+        # Check for shared session folder ID
+        shared_folder_id = session.get('shared_folder_id')
+        shared_user_id = session.get('shared_user_id')
+        
         print(f"   👤 User ID: {user_id}")
         print(f"   📁 Current folder ID: {current_folder_id}")
+        print(f"   🔗 Shared folder ID: {shared_folder_id}")
+        print(f"   🔗 Shared user ID: {shared_user_id}")
         
         # First, try uploaded files folder (universal search includes uploaded files)
         upload_folder = os.path.join('storage', 'uploads', user_id)
@@ -1825,11 +1819,16 @@ def serve_photo(filename):
             # For nested paths like "1111/ABN10404.jpg", we need to serve from the base upload folder
             return send_from_directory(upload_folder, filename)
         
-        # Second, try Google Drive cache folder (if folder session exists)
-        if current_folder_id:
-            cache_folder = os.path.join('storage', 'downloads', f"{user_id}_{current_folder_id}")
+        # Second, try Google Drive cache folder
+        # Use shared session data if available, otherwise use current folder
+        folder_id_to_check = shared_folder_id or current_folder_id
+        user_id_to_check = shared_user_id or user_id
+        
+        if folder_id_to_check:
+            cache_folder = os.path.join('storage', 'downloads', f"{user_id_to_check}_{folder_id_to_check}")
             cache_file_path = os.path.join(cache_folder, filename)
             print(f"   📁 Checking cache: {cache_file_path}")
+            print(f"   📁 Cache folder exists: {os.path.exists(cache_folder)}")
             
             if os.path.exists(cache_file_path):
                 print(f"   ✅ Found cached file: {cache_file_path}")
@@ -2438,20 +2437,12 @@ def download_video_segment():
 @app.route('/sitemap.xml')
 def sitemap_xml():
     """Serve sitemap.xml file"""
-    try:
-        return send_from_directory('.', 'sitemap.xml', mimetype='application/xml')
-    except Exception as e:
-        print(f"Error serving sitemap: {e}")
-        return "Sitemap not found", 404
+    return send_file('sitemap.xml', mimetype='application/xml')
 
 @app.route('/robots.txt')
 def robots_txt():
     """Serve robots.txt file"""
-    try:
-        return send_from_directory('.', 'robots.txt', mimetype='text/plain')
-    except Exception as e:
-        print(f"Error serving robots.txt: {e}")
-        return "Robots.txt not found", 404
+    return send_from_directory('.', 'robots.txt', mimetype='text/plain')
 
 @app.route('/manifest.json')
 def manifest():
@@ -2461,29 +2452,15 @@ def manifest():
 @app.route('/auto-process')
 def auto_process():
     """Auto-process route with beautiful welcome page"""
-    session_id = request.args.get('session', '')
     drive_url = request.args.get('drive', '')
     event_name = request.args.get('event', '')
     event_date = request.args.get('date', '')
-    
-    # If session ID provided, load session data
-    if session_id:
-        from shared_session_manager import get_session_manager
-        session_manager = get_session_manager()
-        session_data = session_manager.get_session(session_id)
-        
-        if session_data:
-            metadata = session_data.get('metadata', {})
-            drive_url = metadata.get('drive_url', drive_url)
-            event_name = metadata.get('event_name', event_name)
-            event_date = metadata.get('event_date', event_date)
     
     # Show welcome page with event info
     return render_template('auto_process_welcome.html', 
                           drive_url=drive_url,
                           event_name=event_name,
-                          event_date=event_date,
-                          session_id=session_id)
+                          event_date=event_date)
 
 @app.route('/admin/link-generator')
 def admin_link_generator():
@@ -2492,27 +2469,16 @@ def admin_link_generator():
 
 @app.route('/api/create-share-session', methods=['POST'])
 def create_share_session():
-    """Create a shareable session for processed photos"""
+    """Create a shareable session after admin processes photos"""
     try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not authenticated'})
-        
-        from shared_session_manager import get_session_manager
+        from shared_session_manager import create_shared_session
         
         data = request.get_json()
-        user_id = session['user_id']
+        admin_user_id = data.get('admin_user_id')
         folder_id = data.get('folder_id')
-        metadata = {
-            'company_name': data.get('company_name'),
-            'event_name': data.get('event_name'),
-            'event_date': data.get('event_date'),
-            'logo_filename': data.get('logo_filename'),
-            'drive_url': data.get('drive_url')
-        }
+        metadata = data.get('metadata', {})
         
-        # Create session
-        session_manager = get_session_manager()
-        session_id = session_manager.create_session(user_id, folder_id, metadata)
+        session_id = create_shared_session(admin_user_id, folder_id, metadata)
         
         if session_id:
             return jsonify({
@@ -2528,31 +2494,36 @@ def create_share_session():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/api/load-share-session/<session_id>', methods=['GET'])
-def load_share_session(session_id):
-    """Load a shared session for end users"""
+@app.route('/api/load-share-session/<session_id>')
+def load_share_session_api(session_id):
+    """Load shared session data and store in Flask session"""
     try:
-        from shared_session_manager import get_session_manager
+        from shared_session_manager import load_shared_session
         
-        session_manager = get_session_manager()
-        session_data = session_manager.get_session(session_id)
+        session_data = load_shared_session(session_id)
         
         if session_data:
-            # Store admin's user_id and folder_id in user's session for search
-            session['shared_session_admin'] = session_data['admin_user_id']
-            session['shared_session_folder'] = session_data['folder_id']
+            # Store in Flask session for photo serving
+            session['shared_folder_id'] = session_data.get('folder_id')
+            session['shared_user_id'] = session_data.get('admin_user_id')
+            
+            print(f"✅ Loaded and stored shared session: {session_id}")
+            print(f"   Folder ID: {session_data.get('folder_id')}")
+            print(f"   Admin User: {session_data.get('admin_user_id')}")
             
             return jsonify({
                 'success': True,
-                'metadata': session_data['metadata'],
-                'admin_user_id': session_data['admin_user_id'],
-                'folder_id': session_data['folder_id']
+                'folder_id': session_data.get('folder_id'),
+                'admin_user_id': session_data.get('admin_user_id'),
+                'metadata': session_data.get('metadata', {})
             })
         else:
-            return jsonify({'success': False, 'error': 'Session not found or expired'})
+            return jsonify({'success': False, 'error': 'Session not found'})
             
     except Exception as e:
         print(f"❌ Error loading share session: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/store-return-url', methods=['POST'])
