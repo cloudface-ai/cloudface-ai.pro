@@ -28,27 +28,40 @@ cp .env.local .env
 cp .env.production .env
 ```
 
-## 🧪 Testing Locally with Test Mode
+## ⚠️ IMPORTANT: Razorpay Testing Limitations
 
-1. **Switch to local environment:**
+**Razorpay LIVE keys only work on registered domains (cloudface-ai.com), NOT on localhost!**
+
+### Option 1: UI Testing Only (Local)
+Test the payment UI/flow locally, but actual payment will fail (which is expected):
+```bash
+./switch-env.sh local
+python web_server.py
+# Click through payment flow to test UI only
+```
+
+### Option 2: Full Payment Testing (VPS Required)  
+To test actual payments with invoices, deploy to VPS:
+
+1. **Deploy to VPS:**
    ```bash
-   ./switch-env.sh local
+   ssh your_vps
+   cd /var/www/cloudface_ai
+   git pull origin main
+   cp .env.production .env  # Use LIVE keys
+   source venv/bin/activate
+   pkill -f web_server.py
+   python3 web_server.py > server.log 2>&1 &
    ```
 
-2. **Start the server:**
-   ```bash
-   python web_server.py
-   ```
+2. **Test on production domain:**
+   - Go to: https://cloudface-ai.com/pricing
+   - Use REAL card (small amount)
+   - Payment will succeed
+   - Invoice generated in Razorpay Dashboard
 
-3. **Use test card details:**
-   - Card: `4111 1111 1111 1111`
-   - CVV: Any 3 digits (e.g., `123`)
-   - Expiry: Any future date (e.g., `12/25`)
-   - OTP: `1234` (if prompted)
-
-4. **View invoices:**
-   - Login to Razorpay Dashboard
-   - Toggle to **TEST MODE** (top-left)
+3. **View invoices:**
+   - Login to Razorpay Dashboard (LIVE MODE)
    - Go to **Payments** section
    - Click on payment to download invoice PDF
 
