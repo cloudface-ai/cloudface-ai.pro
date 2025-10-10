@@ -455,7 +455,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'heic'}
 
 # Google OAuth Configuration
 from dotenv import load_dotenv
-load_dotenv('.env')
+load_dotenv('.env', override=True)
 
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
@@ -465,8 +465,8 @@ GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 GOOGLE_SCOPES = [
     'https://www.googleapis.com/auth/userinfo.profile',
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/drive.readonly'
+    'https://www.googleapis.com/auth/userinfo.email'
+    # Note: Drive scope removed - using public links instead
 ]
 
 # Ensure upload folder exists
@@ -774,9 +774,12 @@ def pricing():
     try:
         from pricing_manager import pricing_manager
         
-        # Detect user location for currency (default to INR)
-        user_location = request.headers.get('CF-IPCountry', 'IN')  # Cloudflare header
-        currency = 'inr' if user_location == 'IN' else 'usd'
+        # Get currency from URL parameter or detect from location
+        currency = request.args.get('currency', '').lower()
+        if currency not in ['inr', 'usd']:
+            # Detect user location for currency (default to INR)
+            user_location = request.headers.get('CF-IPCountry', 'IN')  # Cloudflare header
+            currency = 'inr' if user_location == 'IN' else 'usd'
         
         # Get all plans
         plans = pricing_manager.get_all_plans(currency)
@@ -1020,6 +1023,7 @@ def create_payment():
             result = payment_gateway.create_razorpay_order(
                 plan['price'], plan['name'], session['user_id']
             )
+            print(f"💳 Razorpay order result: {result}")
         else:
             result = payment_gateway.create_paypal_order(
                 plan['price'], plan['name'], session['user_id']
@@ -1028,6 +1032,9 @@ def create_payment():
         return jsonify(result)
         
     except Exception as e:
+        print(f"❌ Payment creation exception: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/verify-payment', methods=['POST'])

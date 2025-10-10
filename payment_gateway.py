@@ -7,8 +7,13 @@ import os
 import json
 import hashlib
 import hmac
+import time
 from typing import Dict, Any, Optional
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables with explicit path and override
+load_dotenv('.env', override=True)
 
 class PaymentGateway:
     """Handles payment processing for different regions"""
@@ -18,6 +23,11 @@ class PaymentGateway:
         self.razorpay_key_secret = os.getenv('RAZORPAY_KEY_SECRET', '')
         self.paypal_client_id = os.getenv('PAYPAL_CLIENT_ID', '')
         self.paypal_client_secret = os.getenv('PAYPAL_CLIENT_SECRET', '')
+        
+        # Debug: Print what was loaded
+        print(f"🔧 PaymentGateway initialized:")
+        print(f"   Razorpay Key ID: {self.razorpay_key_id}")
+        print(f"   Razorpay Key Secret: {'SET' if self.razorpay_key_secret else 'EMPTY'} ({len(self.razorpay_key_secret)} chars)")
         
         # Payment logs directory
         self.logs_dir = "storage/payment_logs"
@@ -31,19 +41,24 @@ class PaymentGateway:
             except ImportError:
                 return {'success': False, 'error': 'Razorpay not installed. Run: pip install razorpay==1.3.0'}
             
+            print(f"🔑 Creating Razorpay client with:")
+            print(f"   Key ID: {self.razorpay_key_id}")
+            print(f"   Key Secret: {self.razorpay_key_secret[:5]}...{self.razorpay_key_secret[-5:] if self.razorpay_key_secret else 'EMPTY'}")
+            
             client = razorpay.Client(auth=(self.razorpay_key_id, self.razorpay_key_secret))
             
             order_data = {
                 'amount': amount_inr * 100,  # Razorpay expects paise
                 'currency': 'INR',
-                'receipt': f"facetak_{user_id}_{int(time.time())}",
+                'receipt': f"cf_{int(time.time())}",  # Max 40 chars
                 'notes': {
                     'plan': plan_name,
                     'user_id': user_id,
-                    'app': 'facetak'
+                    'app': 'cloudface'
                 }
             }
             
+            print(f"💳 Creating order for {amount_inr} INR")
             order = client.order.create(data=order_data)
             
             # Log order creation
@@ -64,6 +79,10 @@ class PaymentGateway:
             
         except Exception as e:
             print(f"❌ Razorpay order creation failed: {e}")
+            print(f"   Key ID: {self.razorpay_key_id}")
+            print(f"   Secret length: {len(self.razorpay_key_secret) if self.razorpay_key_secret else 0}")
+            import traceback
+            traceback.print_exc()
             return {'success': False, 'error': str(e)}
     
     def verify_razorpay_payment(self, payment_data: Dict[str, Any]) -> Dict[str, Any]:

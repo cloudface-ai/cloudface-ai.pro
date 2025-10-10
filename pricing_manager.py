@@ -38,33 +38,33 @@ class PricingManager:
                 'name': 'Personal',
                 'images': 20000,
                 'videos': 20,
-                'price_inr': 2399,
-                'price_usd': 29,
+                'price_inr': 3999,
+                'price_usd': 49,
                 'features': ['Advanced face recognition', 'Video processing', 'Priority support', 'Smart caching']
             },
             PlanType.PRO: {
                 'name': 'Professional',
                 'images': 50000,
                 'videos': 50,
-                'price_inr': 3399,
-                'price_usd': 41,
+                'price_inr': 6999,
+                'price_usd': 85,
                 'features': ['Professional accuracy', 'Bulk processing', 'API access', 'Custom thresholds']
             },
             PlanType.PRO_PLUS: {
                 'name': 'Business',
                 'images': 100000,
                 'videos': 100,
-                'price_inr': 5999,
-                'price_usd': 72,
+                'price_inr': 11999,
+                'price_usd': 145,
                 'features': ['Enterprise features', 'Unlimited folders', 'Advanced analytics', 'White-label option']
             },
             PlanType.EVERYTHING: {
-                'name': 'Premium',
+                'name': 'Business Plus',
                 'images': 250000,
                 'videos': 250,
-                'price_inr': 11999,
-                'price_usd': 144,
-                'features': ['All features', 'Maximum limits', 'Premium support', 'Custom integrations']
+                'price_inr': 15999,
+                'price_usd': 195,
+                'features': ['All features', 'Maximum limits', 'Priority support', 'Custom integrations', 'Advanced analytics']
             },
             PlanType.ENTERPRISE: {
                 'name': 'Enterprise',
