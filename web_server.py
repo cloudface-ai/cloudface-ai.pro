@@ -2431,7 +2431,12 @@ def sitemap_xml():
 @app.route('/robots.txt')
 def robots_txt():
     """Serve robots.txt file"""
-    return send_file('robots.txt', mimetype='text/plain')
+    return send_from_directory('.', 'robots.txt', mimetype='text/plain')
+
+@app.route('/manifest.json')
+def manifest():
+    """Serve manifest.json file"""
+    return send_from_directory('.', 'manifest.json', mimetype='application/json')
 
 @app.route('/auto-process')
 def auto_process():
