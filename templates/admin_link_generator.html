@@ -542,19 +542,36 @@
             btn.disabled = true;
             btn.textContent = '⏳ Creating share session...';
             
-            // Create shareable session via API
-            fetch('/api/create-share-session', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    folder_id: folderId,
-                    drive_url: driveUrl,
-                    company_name: companyName,
-                    event_name: eventName,
-                    event_date: eventDate,
-                    logo_filename: logoFilename
+            // Get admin user ID from auth status
+            fetch('/auth/status', { credentials: 'same-origin' })
+                .then(res => res.json())
+                .then(authData => {
+                    if (!authData.authenticated) {
+                        alert('Please login first');
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                        return;
+                    }
+                    
+                    const adminUserId = authData.user_email;
+                    
+                    // Create shareable session via API
+                    return fetch('/api/create-share-session', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            admin_user_id: adminUserId,
+                            folder_id: folderId,
+                            metadata: {
+                                drive_url: driveUrl,
+                                company_name: companyName,
+                                event_name: eventName,
+                                event_date: eventDate,
+                                logo_filename: logoFilename
+                            }
+                        })
+                    });
                 })
-            })
             .then(res => res.json())
             .then(data => {
                 btn.disabled = false;
