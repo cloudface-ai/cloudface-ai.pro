@@ -1798,14 +1798,8 @@ def serve_photo(filename):
         user_id = session['user_id']
         current_folder_id = session.get('current_folder_id')
         
-        # Check for shared session folder ID
-        shared_folder_id = session.get('shared_folder_id')
-        shared_user_id = session.get('shared_user_id')
-        
         print(f"   👤 User ID: {user_id}")
         print(f"   📁 Current folder ID: {current_folder_id}")
-        print(f"   🔗 Shared folder ID: {shared_folder_id}")
-        print(f"   🔗 Shared user ID: {shared_user_id}")
         
         # First, try uploaded files folder (universal search includes uploaded files)
         upload_folder = os.path.join('storage', 'uploads', user_id)
@@ -1819,16 +1813,11 @@ def serve_photo(filename):
             # For nested paths like "1111/ABN10404.jpg", we need to serve from the base upload folder
             return send_from_directory(upload_folder, filename)
         
-        # Second, try Google Drive cache folder
-        # Use shared session data if available, otherwise use current folder
-        folder_id_to_check = shared_folder_id or current_folder_id
-        user_id_to_check = shared_user_id or user_id
-        
-        if folder_id_to_check:
-            cache_folder = os.path.join('storage', 'downloads', f"{user_id_to_check}_{folder_id_to_check}")
+        # Second, try Google Drive cache folder (if folder session exists)
+        if current_folder_id:
+            cache_folder = os.path.join('storage', 'downloads', f"{user_id}_{current_folder_id}")
             cache_file_path = os.path.join(cache_folder, filename)
             print(f"   📁 Checking cache: {cache_file_path}")
-            print(f"   📁 Cache folder exists: {os.path.exists(cache_folder)}")
             
             if os.path.exists(cache_file_path):
                 print(f"   ✅ Found cached file: {cache_file_path}")
