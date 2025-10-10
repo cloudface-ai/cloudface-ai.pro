@@ -2471,14 +2471,15 @@ def admin_link_generator():
 def create_share_session():
     """Create a shareable session after admin processes photos"""
     try:
-        from shared_session_manager import create_shared_session
+        from shared_session_manager import get_session_manager
         
         data = request.get_json()
         admin_user_id = data.get('admin_user_id')
         folder_id = data.get('folder_id')
         metadata = data.get('metadata', {})
         
-        session_id = create_shared_session(admin_user_id, folder_id, metadata)
+        manager = get_session_manager()
+        session_id = manager.create_session(admin_user_id, folder_id, metadata)
         
         if session_id:
             return jsonify({
@@ -2498,9 +2499,10 @@ def create_share_session():
 def load_share_session_api(session_id):
     """Load shared session data and store in Flask session"""
     try:
-        from shared_session_manager import load_shared_session
+        from shared_session_manager import get_session_manager
         
-        session_data = load_shared_session(session_id)
+        manager = get_session_manager()
+        session_data = manager.get_session(session_id)
         
         if session_data:
             # Store in Flask session for photo serving
