@@ -2456,67 +2456,6 @@ def admin_link_generator():
     """Admin page to generate shareable auto-process links"""
     return render_template('admin_link_generator.html')
 
-@app.route('/api/create-share-session', methods=['POST'])
-def create_share_session():
-    """Create a shareable session after admin processes photos"""
-    try:
-        from shared_session_manager import get_session_manager
-        
-        data = request.get_json()
-        admin_user_id = data.get('admin_user_id')
-        folder_id = data.get('folder_id')
-        metadata = data.get('metadata', {})
-        
-        manager = get_session_manager()
-        session_id = manager.create_session(admin_user_id, folder_id, metadata)
-        
-        if session_id:
-            return jsonify({
-                'success': True,
-                'session_id': session_id
-            })
-        else:
-            return jsonify({'success': False, 'error': 'Failed to create session'})
-            
-    except Exception as e:
-        print(f"❌ Error creating share session: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/load-share-session/<session_id>')
-def load_share_session_api(session_id):
-    """Load shared session data and store in Flask session"""
-    try:
-        from shared_session_manager import get_session_manager
-        
-        manager = get_session_manager()
-        session_data = manager.get_session(session_id)
-        
-        if session_data:
-            # Store in Flask session for photo serving
-            session['shared_folder_id'] = session_data.get('folder_id')
-            session['shared_user_id'] = session_data.get('admin_user_id')
-            
-            print(f"✅ Loaded and stored shared session: {session_id}")
-            print(f"   Folder ID: {session_data.get('folder_id')}")
-            print(f"   Admin User: {session_data.get('admin_user_id')}")
-            
-            return jsonify({
-                'success': True,
-                'folder_id': session_data.get('folder_id'),
-                'admin_user_id': session_data.get('admin_user_id'),
-                'metadata': session_data.get('metadata', {})
-            })
-        else:
-            return jsonify({'success': False, 'error': 'Session not found'})
-            
-    except Exception as e:
-        print(f"❌ Error loading share session: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)})
-
 @app.route('/store-return-url', methods=['POST'])
 def store_return_url():
     """Store return URL in session for after authentication"""
