@@ -10,7 +10,7 @@ from firebase_admin import credentials, firestore
 import numpy as np
 
 # Load environment variables from example.env (dev/local)
-load_dotenv('example.env')
+load_dotenv('.env', override=True)
 
 # Firebase configuration from environment variables
 FIREBASE_CONFIG = {

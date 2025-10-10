@@ -242,6 +242,45 @@
             color: var(--primary-dark);
             text-decoration: underline;
         }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+
+            /* Stack share buttons vertically on mobile */
+            div[style*="grid-template-columns: repeat(2"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            .qr-code canvas, .qr-code svg {
+                max-width: 250px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            input[type="text"] {
+                font-size: 16px; /* Prevent zoom on iOS */
+            }
+        }
     </style>
 </head>
 <body>
@@ -284,19 +323,32 @@
         </div>
 
 
-        <button class="btn" onclick="generateLink()">🎯 Generate Shareable Link</button>
+        <button class="btn" onclick="generateLink()">📤 Share Now</button>
 
         <div id="output" class="output-box">
-            <h3 style="margin-bottom: 15px; color: #333;">Your Shareable Link:</h3>
+            <h3 style="margin-bottom: 15px; color: #333;">✅ Share Your Processed Photos:</h3>
             
             <div class="generated-link" id="generatedLink"></div>
             
-            <button class="btn btn-secondary" onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0;">
+                <button class="btn btn-secondary" onclick="copyToClipboard()" style="width: auto;">
+                    📋 Copy Link
+                </button>
+                <button class="btn btn-secondary" onclick="shareViaWhatsApp()" style="width: auto; background: #25D366;">
+                    💬 WhatsApp
+                </button>
+                <button class="btn btn-secondary" onclick="shareViaEmail()" style="width: auto; background: #ea4335;">
+                    📧 Email
+                </button>
+                <button class="btn btn-secondary" onclick="downloadQR()" style="width: auto; background: #fbbc04;">
+                    ⬇️ Download QR
+                </button>
+            </div>
             
             <div class="qr-code" id="qrCode">
-                <h4 style="margin: 15px 0 10px; color: #333;">QR Code:</h4>
-                <canvas id="qrCanvas"></canvas>
-                <p class="help-text">Users can scan this to access the link</p>
+                <h4 style="margin: 15px 0 10px; color: #333;">📱 QR Code:</h4>
+                <div id="qrCodeContainer"></div>
+                <p class="help-text">Users can scan this to instantly access the photos</p>
             </div>
             
             <div id="successMessage" class="success-message">
@@ -311,10 +363,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" onload="console.log('✅ QRCode library loaded')" onerror="console.error('❌ QRCode library failed to load')"></script>
 
     <script>
-        // Wait for QRCode library to load
+        // Global variables
         let qrCodeReady = false;
+        let currentQRDataURL = null;  // Store QR code for download
+        let generatedShareLink = '';  // Store generated link
         
+        // Auto-fill Drive URL from URL parameters (when coming from main app)
         window.addEventListener('load', function() {
+            // Check for URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const driveUrl = urlParams.get('drive');
+            const depth = urlParams.get('depth');
+            
+            // Auto-fill if coming from processing
+            if (driveUrl) {
+                document.getElementById('driveUrl').value = decodeURIComponent(driveUrl);
+                console.log('✅ Auto-filled Drive URL from processed folder');
+            }
+            
+            // Wait for QRCode library to load
             setTimeout(() => {
                 qrCodeReady = typeof qrcode !== 'undefined';
                 if (qrCodeReady) {
@@ -326,7 +393,7 @@
         });
 
         function generateQRCode(text) {
-            const qrContainer = document.getElementById('qrCode');
+            const qrContainer = document.getElementById('qrCodeContainer');
             
             if (!text) {
                 qrContainer.innerHTML = '<p style="color: #999; margin-top: 10px;">No link to generate QR code for</p>';
@@ -347,9 +414,22 @@
                         qr.addData(text);
                         qr.make();
                         
-                        // Create QR code as SVG
-                        const qrSvg = qr.createSvgTag(4, 0);
+                        // Create QR code as SVG with larger size for better scanning
+                        const cellSize = 6;
+                        const margin = 4;
+                        const qrSvg = qr.createSvgTag(cellSize, margin);
+                        
                         qrContainer.innerHTML = qrSvg;
+                        
+                        // Store QR as data URL for download
+                        const svg = qrContainer.querySelector('svg');
+                        if (svg) {
+                            svg.setAttribute('width', '300');
+                            svg.setAttribute('height', '300');
+                            const svgData = new XMLSerializer().serializeToString(svg);
+                            currentQRDataURL = 'data:image/svg+xml;base64,' + btoa(svgData);
+                        }
+                        
                         console.log('✅ QR code generated successfully');
                     } catch (err) {
                         console.error('QR code error:', err);
@@ -450,29 +530,123 @@
                 return;
             }
 
-            // Generate the shareable link with parameters
-            const baseUrl = window.location.origin;
-            let shareableLink = `${baseUrl}/auto-process?drive=${encodeURIComponent(driveUrl)}`;
-            
-            if (companyName) {
-                shareableLink += `&company=${encodeURIComponent(companyName)}`;
+            // Extract folder ID from URL
+            let folderId = driveUrl;
+            if (driveUrl.includes('/folders/')) {
+                folderId = driveUrl.split('/folders/')[1].split('/')[0].split('?')[0];
             }
             
-            if (logoFilename) {
-                shareableLink += `&logo=${encodeURIComponent(logoFilename)}`;
+            // Show loading
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Creating share session...';
+            
+            // Create shareable session via API
+            fetch('/api/create-share-session', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    folder_id: folderId,
+                    drive_url: driveUrl,
+                    company_name: companyName,
+                    event_name: eventName,
+                    event_date: eventDate,
+                    logo_filename: logoFilename
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                
+                if (data.success) {
+                    // Generate shareable link with session ID
+                    const baseUrl = window.location.origin;
+                    const shareableLink = `${baseUrl}/auto-process?session=${data.session_id}`;
+                    
+                    document.getElementById('generatedLink').textContent = shareableLink;
+                    document.getElementById('output').classList.add('show');
+                    generatedShareLink = shareableLink;
+                    generateQRCode(shareableLink);
+                    
+                    console.log('✅ Shareable session created:', data.session_id);
+                } else {
+                    alert('Failed to create share session: ' + data.error);
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                alert('Error creating share session: ' + error.message);
+            });
+        }
+
+        // NEW: Share via WhatsApp
+        function shareViaWhatsApp() {
+            if (!generatedShareLink) {
+                alert('Please generate a link first');
+                return;
             }
             
-            if (eventName) {
-                shareableLink += `&event=${encodeURIComponent(eventName)}`;
+            const eventName = document.getElementById('eventName').value.trim() || 'Event Photos';
+            const companyName = document.getElementById('companyName').value.trim() || 'CloudFace AI';
+            
+            const message = `🎉 *${eventName}* photos are ready!\n\n` +
+                          `${companyName} has shared photos with you.\n\n` +
+                          `Click to view and search:\n${generatedShareLink}\n\n` +
+                          `Powered by CloudFace AI ☁️`;
+            
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        // NEW: Share via Email
+        function shareViaEmail() {
+            if (!generatedShareLink) {
+                alert('Please generate a link first');
+                return;
             }
             
-            if (eventDate) {
-                shareableLink += `&date=${encodeURIComponent(eventDate)}`;
+            const eventName = document.getElementById('eventName').value.trim() || 'Event Photos';
+            const companyName = document.getElementById('companyName').value.trim() || 'CloudFace AI';
+            
+            const subject = `${eventName} - Photo Access Link`;
+            const body = `Hello,\n\n` +
+                        `${companyName} has shared ${eventName} photos with you.\n\n` +
+                        `Click the link below to view and search your photos:\n` +
+                        `${generatedShareLink}\n\n` +
+                        `You can search for yourself by uploading a selfie.\n\n` +
+                        `Best regards,\n${companyName}\n\n` +
+                        `---\n` +
+                        `Powered by CloudFace AI - Privacy-First Face Recognition`;
+            
+            const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoUrl;
+        }
+
+        // NEW: Download QR Code
+        function downloadQR() {
+            if (!currentQRDataURL) {
+                alert('Please generate a QR code first');
+                return;
             }
             
-            document.getElementById('generatedLink').textContent = shareableLink;
-            document.getElementById('output').classList.add('show');
-            generateQRCode(shareableLink);
+            const eventName = document.getElementById('eventName').value.trim() || 'Event';
+            const filename = `CloudFace_QR_${eventName.replace(/\s+/g, '_')}.svg`;
+            
+            const downloadLink = document.createElement('a');
+            downloadLink.href = currentQRDataURL;
+            downloadLink.download = filename;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // Show success message
+            const successMsg = document.getElementById('successMessage');
+            successMsg.textContent = '✅ QR Code downloaded!';
+            successMsg.classList.add('show');
+            setTimeout(() => successMsg.classList.remove('show'), 3000);
         }
 
         function copyToClipboard() {

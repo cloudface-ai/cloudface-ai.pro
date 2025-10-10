@@ -340,9 +340,19 @@ class RealDriveProcessor:
                 if page_token:
                     params['pageToken'] = page_token
                 
+                # Try with auth token first, fall back to public API key on 403
                 headers = {'Authorization': f'Bearer {access_token}'}
                 
                 response = requests.get(url, params=params, headers=headers)
+                
+                # If 403 Forbidden, try without auth (public folder)
+                if response.status_code == 403:
+                    print(f"   ⚠️  Auth failed (403), trying as public folder...")
+                    # Get API key from env or use a default one
+                    api_key = os.getenv('GOOGLE_API_KEY', 'AIzaSyC80YzDXjtO9E6Mhkox-aYWmRQXsWiYJOM')
+                    params['key'] = api_key
+                    response = requests.get(url, params=params)  # No auth header
+                
                 response.raise_for_status()
                 
                 data = response.json()

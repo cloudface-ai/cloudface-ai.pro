@@ -207,6 +207,37 @@
             .content {
                 padding: 30px 20px;
             }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-button {
+                font-size: 16px;
+                padding: 14px 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .content {
+                padding: 20px 15px;
+            }
+
+            .feature-text h3 {
+                font-size: 16px;
+            }
+
+            .feature-text p {
+                font-size: 13px;
+            }
         }
     </style>
 </head>
@@ -315,7 +346,14 @@
 
         function proceedToApp() {
             // Build the app URL with parameters
+            {% if session_id %}
+            // Session ID provided - use pre-processed data
+            let appUrl = '/app?session={{ session_id }}';
+            {% else %}
+            // No session ID - regular auto-process with Drive URL
             let appUrl = '/app?auto_drive={{ drive_url|urlencode }}';
+            {% endif %}
+            
             {% if event_name %}
             appUrl += '&event={{ event_name|urlencode }}';
             {% endif %}
