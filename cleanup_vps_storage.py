@@ -31,75 +31,84 @@ def format_size(bytes_size):
     return f"{bytes_size:.2f} TB"
 
 def cleanup_firebase():
-    """Clean up Firebase face embeddings"""
+    """Clean up ALL Firebase collections"""
     print("\n🔥 Firebase Cleanup")
     print("=" * 50)
     
-    try:
-        # Get all face embeddings from Firebase
-        faces_ref = db.collection('face_embeddings')
-        
-        # Count documents
-        all_docs = list(faces_ref.stream())
-        total_docs = len(all_docs)
-        
-        print(f"📊 Total face embeddings in Firebase: {total_docs:,}")
-        
-        if total_docs == 0:
-            print("✅ Firebase is already clean!")
-            return 0
-        
-        # Show breakdown by user
-        user_counts = {}
-        for doc in all_docs:
-            data = doc.to_dict()
-            user_id = data.get('user_id', 'unknown')
-            user_counts[user_id] = user_counts.get(user_id, 0) + 1
-        
-        print(f"\n📋 Breakdown by user:")
-        for user_id, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True):
-            print(f"   {user_id}: {count:,} embeddings")
-        
-        # Ask for confirmation
-        print(f"\n⚠️  WARNING: This will delete ALL {total_docs:,} face embeddings from Firebase!")
-        print("   Users will need to reprocess ALL photos from scratch.")
-        response = input(f"\n   Delete all Firebase data? (type 'DELETE ALL' to confirm): ").strip()
-        
-        if response == 'DELETE ALL':
-            deleted_count = 0
-            print(f"\n🔥 Deleting {total_docs:,} documents...")
+    total_deleted = 0
+    
+    # Collections to clean
+    collections = [
+        'faces',                # Face embeddings (main collection)
+        'face_embeddings',      # Alternative collection name
+        'shared_sessions',      # Shared session data
+        'user_sessions',        # User session data
+        'search_cache',         # Search cache
+    ]
+    
+    for collection_name in collections:
+        try:
+            print(f"\n📦 Checking collection: {collection_name}")
+            collection_ref = db.collection(collection_name)
             
-            # Delete in batches (Firestore limit: 500 per batch)
-            batch = db.batch()
-            batch_count = 0
+            # Count documents
+            all_docs = list(collection_ref.stream())
+            total_docs = len(all_docs)
             
+            if total_docs == 0:
+                print(f"   ✅ Empty (nothing to delete)")
+                continue
+            
+            print(f"   📊 Found {total_docs:,} documents")
+            
+            # Show breakdown by user (if user_id field exists)
+            user_counts = {}
             for doc in all_docs:
-                batch.delete(doc.reference)
-                batch_count += 1
-                deleted_count += 1
+                data = doc.to_dict()
+                user_id = data.get('user_id') or data.get('admin_user_id') or 'unknown'
+                user_counts[user_id] = user_counts.get(user_id, 0) + 1
+            
+            if len(user_counts) <= 10:
+                print(f"   📋 Breakdown:")
+                for user_id, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True):
+                    print(f"      {user_id}: {count:,} docs")
+            
+            # Ask for confirmation
+            response = input(f"   Delete all {total_docs:,} documents from '{collection_name}'? (yes/no): ").strip().lower()
+            
+            if response == 'yes':
+                deleted_count = 0
+                print(f"   🔥 Deleting {total_docs:,} documents...")
                 
-                # Commit every 500 docs
-                if batch_count >= 500:
+                # Delete in batches (Firestore limit: 500 per batch)
+                batch = db.batch()
+                batch_count = 0
+                
+                for doc in all_docs:
+                    batch.delete(doc.reference)
+                    batch_count += 1
+                    deleted_count += 1
+                    
+                    # Commit every 500 docs
+                    if batch_count >= 500:
+                        batch.commit()
+                        print(f"      Progress: {deleted_count:,}/{total_docs:,} deleted...")
+                        batch = db.batch()
+                        batch_count = 0
+                
+                # Commit remaining
+                if batch_count > 0:
                     batch.commit()
-                    print(f"   Progress: {deleted_count:,}/{total_docs:,} deleted...")
-                    batch = db.batch()
-                    batch_count = 0
-            
-            # Commit remaining
-            if batch_count > 0:
-                batch.commit()
-            
-            print(f"   ✅ Deleted {deleted_count:,} face embeddings from Firebase")
-            return deleted_count
-        else:
-            print(f"   ⏭️  Skipped Firebase cleanup")
-            return 0
-            
-    except Exception as e:
-        print(f"❌ Firebase cleanup error: {e}")
-        import traceback
-        traceback.print_exc()
-        return 0
+                
+                print(f"   ✅ Deleted {deleted_count:,} documents from '{collection_name}'")
+                total_deleted += deleted_count
+            else:
+                print(f"   ⏭️  Skipped '{collection_name}'")
+                
+        except Exception as e:
+            print(f"   ❌ Error cleaning '{collection_name}': {e}")
+    
+    return total_deleted
 
 def cleanup_storage():
     """Clean up all storage folders"""
