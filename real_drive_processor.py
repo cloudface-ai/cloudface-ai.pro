@@ -64,13 +64,24 @@ class RealDriveProcessor:
                         progress_tracker.set_total(len(image_files))
                         progress_tracker.update_folder_info(drive_url, len(image_files), len(image_files))
                         
-                        # Instantly complete all steps for cached results
-                        progress_tracker.set_status('download', 'Using cached files...')
+                        # Small delay to ensure frontend EventSource connects
+                        import time
+                        time.sleep(0.5)
+                        
+                        # Show progress through each step for cached results
+                        progress_tracker.set_status('download', 'Loading cached files...')
                         progress_tracker.set_progress('download', 100)
-                        progress_tracker.set_status('processing', 'Using cached embeddings...')
+                        time.sleep(0.3)
+                        
+                        progress_tracker.set_status('processing', 'Loading cached embeddings...')
                         progress_tracker.set_progress('processing', 100)
-                        progress_tracker.set_status('database', 'Using cached database...')
+                        time.sleep(0.3)
+                        
+                        progress_tracker.set_status('database', 'Loading cached database...')
                         progress_tracker.set_progress('database', 100)
+                        time.sleep(0.3)
+                        
+                        # Mark complete with search_ready flag
                         progress_tracker.complete_all_steps()
                         
                         # Return success with cached info
@@ -480,10 +491,37 @@ class RealDriveProcessor:
             return None
     
     def _load_image_from_local(self, local_path):
-        """Load image from local file"""
+        """Load image from local file with EXIF orientation fix"""
         try:
-            # Load image using OpenCV
-            image = cv2.imread(local_path)
+            # First, fix EXIF orientation using PIL
+            from PIL import Image as PILImage
+            from PIL import ExifTags
+            
+            # Open with PIL to handle EXIF
+            pil_img = PILImage.open(local_path)
+            
+            # Fix orientation based on EXIF data
+            try:
+                exif = pil_img._getexif()
+                if exif is not None:
+                    for tag, value in exif.items():
+                        tag_name = ExifTags.TAGS.get(tag, tag)
+                        if tag_name == 'Orientation':
+                            if value == 3:
+                                pil_img = pil_img.rotate(180, expand=True)
+                            elif value == 6:
+                                pil_img = pil_img.rotate(270, expand=True)
+                            elif value == 8:
+                                pil_img = pil_img.rotate(90, expand=True)
+                            print(f"🔄 Fixed EXIF orientation: {value}")
+                            break
+            except (AttributeError, KeyError, IndexError, TypeError):
+                # No EXIF data or orientation tag, continue normally
+                pass
+            
+            # Convert PIL to OpenCV format (RGB to BGR)
+            import numpy as np
+            image = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
             
             if image is None:
                 print(f"❌ Failed to load image: {local_path}")
@@ -504,13 +542,38 @@ class RealDriveProcessor:
             return None
     
     def _bytes_to_cv2_image(self, image_data):
-        """Convert bytes to OpenCV image"""
+        """Convert bytes to OpenCV image with EXIF orientation fix"""
         try:
-            # Convert bytes to numpy array
-            nparr = np.frombuffer(image_data, np.uint8)
+            # Fix EXIF orientation using PIL before converting to cv2
+            from PIL import Image as PILImage
+            from PIL import ExifTags
+            from io import BytesIO
+            import numpy as np
             
-            # Decode image
-            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            # Open with PIL from bytes
+            pil_img = PILImage.open(BytesIO(image_data))
+            
+            # Fix orientation based on EXIF data
+            try:
+                exif = pil_img._getexif()
+                if exif is not None:
+                    for tag, value in exif.items():
+                        tag_name = ExifTags.TAGS.get(tag, tag)
+                        if tag_name == 'Orientation':
+                            if value == 3:
+                                pil_img = pil_img.rotate(180, expand=True)
+                            elif value == 6:
+                                pil_img = pil_img.rotate(270, expand=True)
+                            elif value == 8:
+                                pil_img = pil_img.rotate(90, expand=True)
+                            print(f"🔄 Fixed EXIF orientation: {value}")
+                            break
+            except (AttributeError, KeyError, IndexError, TypeError):
+                # No EXIF data, continue normally
+                pass
+            
+            # Convert PIL to OpenCV format (RGB to BGR)
+            image = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
             
             if image is None:
                 return None

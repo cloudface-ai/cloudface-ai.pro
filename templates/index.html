@@ -891,15 +891,15 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                     <h3>Search Precision</h3>
                     <div class="threshold-options">
                         <label class="threshold-option">
-                            <input type="radio" name="threshold" value="0.75">
+                            <input type="radio" name="threshold" value="0.65">
                             <span class="threshold-label">Precise</span>
                         </label>
                         <label class="threshold-option">
-                            <input type="radio" name="threshold" value="0.65" checked>
+                            <input type="radio" name="threshold" value="0.5" checked>
                             <span class="threshold-label">Balanced</span>
                         </label>
                         <label class="threshold-option">
-                            <input type="radio" name="threshold" value="0.5">
+                            <input type="radio" name="threshold" value="0.4">
                             <span class="threshold-label">Broad</span>
                         </label>
                     </div>
@@ -907,9 +907,9 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                         <details>
                             <summary>💡 What do these settings mean?</summary>
                             <ul>
-                                <li><strong>Precise</strong></li>
-                                <li><strong>Balanced</strong></li>
-                                <li><strong>Broad</strong></li>
+                                <li><strong>Precise (65%):</strong> Find only very similar faces - fewer results, higher confidence</li>
+                                <li><strong>Balanced (50%):</strong> Recommended - good mix of accuracy and coverage</li>
+                                <li><strong>Broad (40%):</strong> Find more matches - includes different angles and lighting</li>
                             </ul>
                         </details>
                     </div>
@@ -1167,7 +1167,7 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                     updateProgressDisplay(progressData);
                     
                     // Handle completion with search-ready message
-                    if (progressData.overall >= 100 || progressData.complete || progressData.search_ready) {
+                    if (progressData.search_ready || (progressData.overall >= 100 && progressData.completion_message)) {
                         console.log('✅ Processing complete, enabling search...');
                         
                         // Enable search button
@@ -1306,7 +1306,8 @@ input[type="text"]{width:100%;padding:.75rem;border:1px solid var(--border);bord
                     operationIcon.textContent = currentIcon;
                     operationText.textContent = `${currentStep.status} (${currentStep.processed_files}/${currentStep.total_files})`;
                     console.log(`🔧 Operation: ${currentStep.status}`);
-                } else if ((progressData.overall || 0) >= 100 || progressData.search_ready || progressData.completion_message) {
+                } else if (progressData.search_ready || ((progressData.overall || 0) >= 100 && progressData.completion_message)) {
+                    // Show complete when search_ready flag is set OR overall is 100% with completion message
                     operationIcon.textContent = '✅';
                     operationText.textContent = 'Processing complete!';
                     

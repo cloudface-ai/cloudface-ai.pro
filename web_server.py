@@ -373,6 +373,8 @@ else:
                                 'folder_info': progress_data.get('folder_info', {}),
                                 'steps': progress_data.get('steps', {}),
                                 'is_active': progress_data.get('is_active', False),
+                                'search_ready': progress_data.get('search_ready', False),
+                                'completion_message': progress_data.get('completion_message', ''),
                                 'errors': progress_data.get('errors', [])[-5:],  # Last 5 errors only
                                 'timestamp': time.time()
                             }
@@ -396,16 +398,20 @@ else:
                                 'folder_info': progress_data.get('folder_info', {}),
                                 'steps': progress_data.get('steps', {}),
                                 'is_active': progress_data.get('is_active', False),
+                                'search_ready': progress_data.get('search_ready', False),
+                                'completion_message': progress_data.get('completion_message', ''),
                                 'errors': progress_data.get('errors', [])[-5:],  # Last 5 errors only
                                 'timestamp': time.time()
                             }
                             yield f"data: {json.dumps(safe_data)}\n\n"
                             last_progress = safe_data.copy()
                         
-                        # Check if processing is complete
-                        if current_overall >= 100:
-                            # Send single, final completion close
-                            yield f"data: {json.dumps({'complete': True})}\n\n"
+                        # Check if processing is complete (search_ready flag)
+                        if progress_data.get('search_ready', False):
+                            # Send final completion message with all data
+                            final_data = safe_data.copy()
+                            final_data['complete'] = True
+                            yield f"data: {json.dumps(final_data)}\n\n"
                             return
                         
                         # Check if processing is active
@@ -1570,7 +1576,7 @@ def search():
             return jsonify({'success': False, 'error': 'No selfie file uploaded'})
         
         file = request.files['selfie']
-        threshold = float(request.form.get('threshold', 0.65))  # Balanced default for better accuracy
+        threshold = float(request.form.get('threshold', 0.50))  # Balanced default
         
         if file.filename == '':
             return jsonify({'success': False, 'error': 'No file selected'})
@@ -2467,13 +2473,40 @@ def auto_process():
     event_name = request.args.get('event', '')
     event_date = request.args.get('date', '')
     session_id = request.args.get('session', '')
+    company_name = ''
+    logo_filename = ''
+    
+    # If session_id provided, load metadata from Firebase
+    if session_id:
+        try:
+            from shared_session_manager import get_session_manager
+            manager = get_session_manager()
+            session_data = manager.get_session(session_id)
+            
+            if session_data:
+                metadata = session_data.get('metadata', {})
+                event_name = metadata.get('event_name', event_name)
+                event_date = metadata.get('event_date', event_date)
+                company_name = metadata.get('company_name', '')
+                logo_filename = metadata.get('logo_filename', '')
+                drive_url = metadata.get('drive_url', drive_url)
+                
+                print(f"📋 Loaded metadata for session {session_id}:")
+                print(f"   Event: {event_name}")
+                print(f"   Date: {event_date}")
+                print(f"   Company: {company_name}")
+                print(f"   Logo: {logo_filename}")
+        except Exception as e:
+            print(f"❌ Error loading session metadata: {e}")
     
     # Show welcome page with event info
     return render_template('auto_process_welcome.html', 
                           drive_url=drive_url,
                           event_name=event_name,
                           event_date=event_date,
-                          session_id=session_id)
+                          session_id=session_id,
+                          company_name=company_name,
+                          logo_filename=logo_filename)
 
 @app.route('/admin/link-generator')
 def admin_link_generator():
