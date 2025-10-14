@@ -1,0 +1,752 @@
+{% extends "cloudface_pro/base.html" %}
+
+{% block title %}{{ event.event_name }} - {{ config.COMPANY_NAME }}{% endblock %}
+
+<style>
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+</style>
+
+{% block content %}
+<div class="container">
+    <!-- Event Header - Minimal -->
+    <div style="background: #4285F4; margin: -16px -16px 24px; padding: 40px 20px; text-align: center; color: white;">
+        {% if event.logo_filename %}
+        <div style="width: 80px; height: 80px; background: white; border-radius: 50%; margin: 0 auto 16px; overflow: hidden;">
+            <img src="/events/{{ event.event_id }}/logo/{{ event.logo_filename }}" 
+                 style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        {% endif %}
+        
+        <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">{{ event.event_name }}</h1>
+        <div style="font-size: 14px; opacity: 0.9;">{{ event.event_date }}</div>
+    </div>
+    
+    {% if guest_logged_in %}
+    <!-- Logged In - Auto Search or Manual Upload -->
+    <div class="card" style="text-align: center; padding: 32px 20px; border: 2px solid #10B981;">
+        <div style="font-size: 48px; margin-bottom: 16px;">👋</div>
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">Welcome, {{ guest_name }}!</h2>
+        <p style="font-size: 14px; color: #6B7280; margin-bottom: 24px;">Ready to find your photos?</p>
+        
+        <button id="autoSearchBtn" class="btn btn-primary" style="margin-bottom: 12px;">
+            🔍 Find My Photos
+        </button>
+        
+        <div style="font-size: 13px; color: #6B7280; margin-top: 16px;">
+            Using your saved selfie • <a href="/guest/logout" style="color: #2D2D2D; text-decoration: underline;">Logout</a>
+        </div>
+    </div>
+    {% else %}
+    <!-- Not Logged In - Show Signup/Login -->
+    <div class="card" style="text-align: center; padding: 32px 20px; border: 2px solid #4285F4;">
+        <div style="font-size: 56px; color: #4285F4; margin-bottom: 16px;">🔐</div>
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">Sign Up to Find Your Photos</h2>
+        <p style="font-size: 14px; color: #6B7280; margin-bottom: 24px;">Create an account to search and save your photos</p>
+        
+        <a href="/guest/signup/{{ event.event_id }}" class="btn btn-primary" style="display: inline-block; text-decoration: none; width: 100%; margin-bottom: 12px;">
+            Create Account
+        </a>
+        
+        <div style="font-size: 13px; color: #6B7280; margin-top: 16px;">
+            Already have an account? <a href="/guest/login/{{ event.event_id }}" style="color: #2D2D2D; text-decoration: underline;">Log in</a>
+        </div>
+    </div>
+    
+    <!-- Benefits of Signing Up -->
+    <div class="card" style="padding: 24px;">
+        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #2D2D2D;">Why Sign Up?</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 24px;">💾</span>
+                <span style="font-size: 14px; color: #4B5563;">Your photos auto-save for future visits</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 24px;">🚫</span>
+                <span style="font-size: 14px; color: #4B5563;">No re-upload needed - search instantly next time</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 24px;">🔒</span>
+                <span style="font-size: 14px; color: #4B5563;">Protects everyone's privacy</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Results -->
+    <div id="results" style="display: none; margin-top: 24px;">
+        <div style="background: #10B981; padding: 24px; border-radius: 12px; text-align: center; color: white; margin-bottom: 20px;">
+            <div style="font-size: 32px; font-weight: 700; margin-bottom: 4px;">
+                <span id="matchCount">0</span> Found
+            </div>
+            <div style="font-size: 14px; opacity: 0.9;">Photos with you</div>
+        </div>
+        
+        <!-- Download All Button -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button id="downloadAllBtn" 
+                    onclick="downloadAllPhotos()"
+                    class="btn btn-primary" 
+                    style="background: #FF9800; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                📦 Download All as ZIP
+            </button>
+        </div>
+        
+        <div id="photoGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;"></div>
+    </div>
+    
+    <!-- No Results -->
+    <div id="noResults" style="display: none; margin-top: 24px;">
+        <div class="card" style="text-align: center; padding: 40px 20px;">
+            <h3 style="margin-bottom: 8px;">No matches</h3>
+            <p style="font-size: 14px; color: #6B7280;">Try a clearer selfie</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const eventId = '{{ event.event_id }}';
+const eventName = '{{ event.event_name }}';
+const guestLoggedIn = {{ 'true' if guest_logged_in else 'false' }};
+const guestEmail = '{{ guest_email or "" }}'; // Guest identifier
+const guestSelfieUrl = '{{ guest_selfie_url or "" }}';
+let currentMatches = []; // Store matches for ZIP download
+let allMatches = []; // Store ALL matches for filtering and saving
+
+// Auto-save feature: Check if guest has saved photos for this event
+window.addEventListener('DOMContentLoaded', () => {
+    // Only load saved photos if the same guest is logged in
+    if (guestLoggedIn) {
+        loadSavedPhotos();
+    }
+});
+
+// Auto-search button (for logged-in guests)
+const autoSearchBtn = document.getElementById('autoSearchBtn');
+if (autoSearchBtn) {
+    autoSearchBtn.addEventListener('click', () => {
+        autoSearchWithStoredSelfie();
+    });
+}
+
+// Auto-search using stored selfie (for logged-in guests)
+async function autoSearchWithStoredSelfie() {
+    if (!guestSelfieUrl) {
+        alert('No selfie found. Please contact support.');
+        return;
+    }
+    
+    autoSearchBtn.disabled = true;
+    autoSearchBtn.textContent = 'Searching...';
+    
+    try {
+        // Fetch the stored selfie
+        const selfieResponse = await fetch(guestSelfieUrl);
+        const selfieBlob = await selfieResponse.blob();
+        
+        // Create FormData with the selfie
+        const formData = new FormData();
+        formData.append('selfie', selfieBlob, 'selfie.jpg');
+        
+        // ============================================================
+        // 🚨 USING THE SAME STREAMING SEARCH - DO NOT MODIFY! 🚨
+        // ============================================================
+        const res = await fetch(`/e/${eventId}/search-stream`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!res.ok) {
+            throw new Error('Search failed');
+        }
+        
+        // Handle streaming response (same as manual upload)
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        currentMatches = [];
+        allMatches = [];
+        
+        document.getElementById('results').style.display = 'block';
+        document.getElementById('matchCount').textContent = '0';
+        document.getElementById('photoGrid').innerHTML = '';
+        
+        let buffer = '';
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        
+                        if (data.type === 'start') {
+                            console.log(`🔍 Searching ${data.total_photos} photos...`);
+                        } else if (data.type === 'match') {
+                            addMatchToGrid(data.match);
+                            currentMatches.push(data.match);
+                            document.getElementById('matchCount').textContent = currentMatches.length;
+                        } else if (data.type === 'complete') {
+                            console.log(`✅ Search complete: ${data.total} matches found`);
+                            if (data.total > 0) {
+                                savePhotosToStorage(allMatches);
+                                showNotification(`Found ${allMatches.length} photos!`);
+                                scheduleFeedbackPopup();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing stream data:', e);
+                    }
+                }
+            }
+        }
+        
+        if (currentMatches.length === 0) {
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('noResults').style.display = 'block';
+        }
+    } catch (err) {
+        alert(err.message || 'Search failed');
+    } finally {
+        autoSearchBtn.disabled = false;
+        autoSearchBtn.textContent = '🔍 Find My Photos';
+    }
+}
+
+const selfieInput = document.getElementById('selfieInput');
+const uploadBtn = document.getElementById('uploadBtn');
+if (selfieInput && uploadBtn) {
+    uploadBtn.onclick = () => selfieInput.click();
+    
+    selfieInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Searching...';
+    
+    const formData = new FormData();
+    formData.append('selfie', file);
+    
+    try {
+        // ============================================================
+        // 🚨 CRITICAL: REAL-TIME STREAMING SEARCH - DO NOT REMOVE! 🚨
+        // This makes photos appear one-by-one as they're found
+        // ============================================================
+        const res = await fetch(`/e/${eventId}/search-stream`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!res.ok) {
+            throw new Error('Search failed');
+        }
+        
+        // Handle streaming response
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        currentMatches = []; // Reset matches
+        
+        // Show results container immediately
+        document.getElementById('results').style.display = 'block';
+        document.getElementById('matchCount').textContent = '0';
+        document.getElementById('photoGrid').innerHTML = '';
+        
+        let buffer = '';
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // Keep incomplete line in buffer
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        
+                        if (data.type === 'start') {
+                            console.log(`🔍 Searching ${data.total_photos} photos...`);
+                        } else if (data.type === 'match') {
+                            // ⚡ REAL-TIME: Add match immediately (photo appears as soon as found!)
+                            addMatchToGrid(data.match);
+                            currentMatches.push(data.match);
+                            document.getElementById('matchCount').textContent = currentMatches.length;
+                        } else if (data.type === 'progress') {
+                            console.log(`📊 Progress: ${data.processed}/${data.total} photos, ${data.matches} matches`);
+                        } else if (data.type === 'complete') {
+                            console.log(`✅ Search complete: ${data.total} matches found`);
+                            // Show download all button if we have matches
+                            if (data.total > 0) {
+                                document.querySelector('#results .btn').style.display = 'block';
+                                
+                                // Auto-save photos for future visits
+                                savePhotosToStorage(allMatches);
+                                showNotification(`${allMatches.length} photos saved! They'll be here when you return.`);
+                                
+                                // Schedule feedback popup after 2 minutes
+                                scheduleFeedbackPopup();
+                            }
+                        } else if (data.type === 'error') {
+                            throw new Error(data.error);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing stream data:', e);
+                    }
+                }
+            }
+        }
+        
+        // Show no results if no matches found
+        if (currentMatches.length === 0) {
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('noResults').style.display = 'block';
+        }
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload Selfie';
+    }
+    };
+}
+
+// ============================================================
+// 🚨 CRITICAL FUNCTION: REAL-TIME PHOTO DISPLAY - DO NOT REMOVE! 🚨
+// This function is called for EACH photo as it's found during streaming search
+// Photos appear one-by-one in real-time (not all at once!)
+// ============================================================
+function addMatchToGrid(match) {
+    // Store match for filtering (without duplicates)
+    if (!allMatches.find(m => m.filename === match.filename)) {
+        allMatches.push(match);
+    }
+    
+    const similarity = Math.round(match.similarity * 100);
+    const photoIndex = allMatches.length - 1;
+    
+    const card = document.createElement('div');
+    card.style.cssText = 'background: white; border-radius: 8px; overflow: hidden; border: 1px solid #E5E7EB; animation: fadeIn 0.5s ease-in; cursor: pointer;';
+    card.innerHTML = `
+        <img src="/events/${eventId}/thumbnail/${match.filename}" 
+             style="width: 100%; aspect-ratio: 1; object-fit: cover;"
+             onclick="openLightbox(${photoIndex})">
+        <div style="padding: 8px; text-align: center;">
+            <div style="color: #10B981; font-weight: 600; font-size: 12px; margin-bottom: 6px;">
+                ${similarity}%
+            </div>
+            <a href="/events/${eventId}/download/${match.filename}" download
+               onclick="event.stopPropagation()"
+               style="display: block; background: #4285F4; color: white; padding: 6px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 12px;">
+                Download
+            </a>
+        </div>
+    `;
+    
+    // ⚡ REAL-TIME: Add to grid immediately (makes photo appear instantly!)
+    document.getElementById('photoGrid').appendChild(card);
+    
+    // Update download count
+    updateDownloadCount();
+    
+    // Scroll to show new photo
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+// ============================================================
+// 🚨 END OF CRITICAL REAL-TIME FUNCTION 🚨
+// ============================================================
+
+function showResults(matches) {
+    // Legacy function - now handled by streaming
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('matchCount').textContent = matches.length;
+    
+    const grid = document.getElementById('photoGrid');
+    grid.innerHTML = '';
+    
+    matches.forEach(m => addMatchToGrid(m));
+    
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Download all photos as ZIP
+async function downloadAllPhotos() {
+    if (currentMatches.length === 0) {
+        alert('No photos to download');
+        return;
+    }
+    
+    const downloadBtn = document.getElementById('downloadAllBtn');
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = 'Creating ZIP...';
+    
+    try {
+        // Create ZIP with all matched photos
+        const filenames = currentMatches.map(m => m.filename);
+        const response = await fetch(`/e/${eventId}/download-zip`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ filenames })
+        });
+        
+        if (response.ok) {
+            // Download the ZIP file
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${eventId}_photos.zip`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            alert('Failed to create ZIP file');
+        }
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('Failed to download photos');
+    } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '📦 Download All as ZIP';
+    }
+}
+
+// ===== PHOTO LIGHTBOX FEATURE =====
+let currentLightboxIndex = 0;
+
+function openLightbox(index) {
+    currentLightboxIndex = index;
+    const match = allMatches[index];
+    if (!match) return;
+    
+    const lightbox = document.createElement('div');
+    lightbox.id = 'lightbox';
+    lightbox.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    const similarity = Math.round(match.similarity * 100);
+    
+    lightbox.innerHTML = `
+        <!-- Close Button -->
+        <button onclick="closeLightbox()" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; z-index: 10000;">
+            ×
+        </button>
+        
+        <!-- Previous Button -->
+        ${index > 0 ? `
+        <button onclick="navigateLightbox(-1)" style="position: absolute; left: 20px; background: rgba(255,255,255,0.2); border: none; color: white; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; cursor: pointer; z-index: 10000;">
+            ‹
+        </button>
+        ` : ''}
+        
+        <!-- Next Button -->
+        ${index < allMatches.length - 1 ? `
+        <button onclick="navigateLightbox(1)" style="position: absolute; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; cursor: pointer; z-index: 10000;">
+            ›
+        </button>
+        ` : ''}
+        
+        <!-- Image Container -->
+        <div style="max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; align-items: center;">
+            <img src="/events/${eventId}/photo/${match.filename}" 
+                 style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+            
+            <!-- Photo Info -->
+            <div style="margin-top: 20px; text-align: center; color: white;">
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">
+                    Match: ${similarity}%
+                </div>
+                <div style="font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 16px;">
+                    Photo ${index + 1} of ${allMatches.length}
+                </div>
+                <a href="/events/${eventId}/download/${match.filename}" download
+                   class="btn btn-primary" style="background: white; color: #2D2D2D; padding: 12px 24px;">
+                    Download Photo
+                </a>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(lightbox);
+    
+    // Close on ESC key
+    document.addEventListener('keydown', handleLightboxKeys);
+}
+
+function closeLightbox() {
+    const lightbox = document.getElementById('lightbox');
+    if (lightbox) {
+        lightbox.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => lightbox.remove(), 300);
+    }
+    document.removeEventListener('keydown', handleLightboxKeys);
+}
+
+function navigateLightbox(direction) {
+    const newIndex = currentLightboxIndex + direction;
+    if (newIndex >= 0 && newIndex < allMatches.length) {
+        closeLightbox();
+        setTimeout(() => openLightbox(newIndex), 100);
+    }
+}
+
+function handleLightboxKeys(e) {
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') navigateLightbox(-1);
+    if (e.key === 'ArrowRight') navigateLightbox(1);
+}
+
+// ===== AUTO-SAVE FEATURE =====
+function savePhotosToStorage(matches) {
+    if (!matches || matches.length === 0) return;
+    
+    const savedData = {
+        eventId: eventId,
+        eventName: eventName,
+        guestEmail: guestEmail, // Save guest identifier
+        timestamp: new Date().toISOString(),
+        matches: matches,
+        totalPhotos: matches.length
+    };
+    
+    // Save to localStorage with event ID as key
+    localStorage.setItem(`cloudface_event_${eventId}`, JSON.stringify(savedData));
+    console.log(`✅ Saved ${matches.length} photos for ${guestEmail || 'guest'}`);
+}
+
+function loadSavedPhotos() {
+    const savedData = localStorage.getItem(`cloudface_event_${eventId}`);
+    
+    if (savedData) {
+        try {
+            const data = JSON.parse(savedData);
+            const daysSinceSearch = (new Date() - new Date(data.timestamp)) / (1000 * 60 * 60 * 24);
+            
+            // Verify this is the same guest
+            if (data.guestEmail !== guestEmail) {
+                console.log(`🔒 Saved photos belong to different guest (${data.guestEmail}), not loading`);
+                return;
+            }
+            
+            // Show saved photos if less than 30 days old and same guest
+            if (daysSinceSearch < 30 && data.matches && data.matches.length > 0) {
+                console.log(`📦 Loading ${data.totalPhotos} saved photos for ${guestEmail}...`);
+                
+                // Update UI
+                currentMatches = data.matches;
+                allMatches = [...data.matches];
+                
+                document.getElementById('results').style.display = 'block';
+                document.getElementById('matchCount').textContent = data.totalPhotos;
+                
+                // Display photos
+                data.matches.forEach(match => {
+                    addMatchToGrid(match);
+                });
+                
+                // Show notification
+                showNotification(`Welcome back! Found your ${data.totalPhotos} saved photos from ${formatDate(data.timestamp)}`);
+            } else if (daysSinceSearch >= 30) {
+                // Clear old data (older than 30 days)
+                localStorage.removeItem(`cloudface_event_${eventId}`);
+            }
+        } catch (e) {
+            console.error('Error loading saved photos:', e);
+        }
+    }
+}
+
+function formatDate(isoString) {
+    const date = new Date(isoString);
+    const now = new Date();
+    const days = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString();
+}
+
+function showNotification(message) {
+    const notif = document.createElement('div');
+    notif.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #10B981;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        font-size: 14px;
+        font-weight: 500;
+        max-width: 90%;
+        animation: slideDown 0.3s ease;
+    `;
+    notif.textContent = message;
+    
+    document.body.appendChild(notif);
+    
+    setTimeout(() => {
+        notif.style.animation = 'slideUp 0.3s ease';
+        setTimeout(() => notif.remove(), 300);
+    }, 5000);
+}
+
+// Add CSS animations for notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideDown {
+        from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
+    @keyframes slideUp {
+        from { transform: translateX(-50%) translateY(0); opacity: 1; }
+        to { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
+// ===== AI FEEDBACK POPUP (2 minutes after search) =====
+function scheduleFeedbackPopup() {
+    // Check if user already gave feedback for this event
+    const feedbackGiven = localStorage.getItem(`feedback_${eventId}`);
+    if (feedbackGiven) return;
+    
+    // Show popup after 2 minutes
+    setTimeout(() => {
+        showFeedbackPopup();
+    }, 120000); // 2 minutes = 120000ms
+}
+
+function showFeedbackPopup() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    overlay.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 32px; max-width: 400px; margin: 20px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <div style="font-size: 48px; margin-bottom: 16px;">🎯</div>
+            <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #2D2D2D;">How satisfied are you?</h2>
+            <p style="font-size: 14px; color: #6B7280; margin-bottom: 24px;">Help us improve our AI face recognition</p>
+            
+            <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 20px;">
+                <button onclick="submitFeedback(1)" class="feedback-btn" style="font-size: 40px; background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; transition: transform 0.2s;">😞</button>
+                <button onclick="submitFeedback(2)" class="feedback-btn" style="font-size: 40px; background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; transition: transform 0.2s;">😐</button>
+                <button onclick="submitFeedback(3)" class="feedback-btn" style="font-size: 40px; background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; transition: transform 0.2s;">😊</button>
+                <button onclick="submitFeedback(4)" class="feedback-btn" style="font-size: 40px; background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; transition: transform 0.2s;">🤩</button>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #9CA3AF; padding: 0 8px;">
+                <span>Not Good</span>
+                <span>Excellent</span>
+            </div>
+            
+            <button onclick="closeFeedbackPopup()" style="margin-top: 20px; background: none; border: none; color: #6B7280; font-size: 13px; cursor: pointer; text-decoration: underline;">
+                Skip
+            </button>
+        </div>
+    `;
+    
+    overlay.id = 'feedbackOverlay';
+    document.body.appendChild(overlay);
+    
+    // Add hover effect
+    document.querySelectorAll('.feedback-btn').forEach(btn => {
+        btn.addEventListener('mouseenter', () => btn.style.transform = 'scale(1.2)');
+        btn.addEventListener('mouseleave', () => btn.style.transform = 'scale(1)');
+    });
+}
+
+async function submitFeedback(rating) {
+    try {
+        const feedbackData = {
+            event_id: eventId,
+            rating: rating,
+            total_matches: allMatches.length,
+            timestamp: new Date().toISOString()
+        };
+        
+        // Send to server
+        await fetch('/api/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(feedbackData)
+        });
+        
+        // Mark as given
+        localStorage.setItem(`feedback_${eventId}`, 'true');
+        
+        // Show thank you message
+        const overlay = document.getElementById('feedbackOverlay');
+        overlay.innerHTML = `
+            <div style="background: white; border-radius: 16px; padding: 40px; max-width: 400px; margin: 20px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                <div style="font-size: 64px; margin-bottom: 16px;">✨</div>
+                <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #2D2D2D;">Thank you!</h2>
+                <p style="font-size: 14px; color: #6B7280;">Your feedback helps us improve</p>
+            </div>
+        `;
+        
+        // Close after 2 seconds
+        setTimeout(() => closeFeedbackPopup(), 2000);
+        
+    } catch (e) {
+        console.error('Failed to send feedback:', e);
+        closeFeedbackPopup();
+    }
+}
+
+function closeFeedbackPopup() {
+    const overlay = document.getElementById('feedbackOverlay');
+    if (overlay) {
+        overlay.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => overlay.remove(), 300);
+    }
+}
+
+// ===== HELPER FUNCTIONS =====
+function updateDownloadCount() {
+    const downloadCountEl = document.getElementById('downloadCount');
+    if (downloadCountEl) {
+        downloadCountEl.textContent = currentMatches.length;
+    }
+}
+</script>
+{% endblock %}

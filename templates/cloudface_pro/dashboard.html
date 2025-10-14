@@ -1,0 +1,96 @@
+{% extends "cloudface_pro/base.html" %}
+
+{% block title %}Dashboard - {{ config.COMPANY_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Current Plan Banner -->
+    {% if subscription %}
+    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 20px; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 4px;">Current Plan</div>
+                <div style="font-size: 24px; font-weight: 700;">{{ subscription.plan_details.name }}</div>
+                <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">
+                    {{ "{:,}".format(subscription.photos_used_this_year) }} / {{ "{:,}".format(subscription.plan_details.max_photos) if subscription.plan_details.max_photos != -1 else '∞' }} photos • 
+                    {{ "%.1f"|format(subscription.storage_used_gb) }} / {{ subscription.plan_details.storage_gb if subscription.plan_details.storage_gb != -1 else '∞' }} GB used
+                </div>
+            </div>
+            <a href="/admin/pricing" class="btn" style="background: white; color: #667eea; padding: 10px 20px; font-size: 13px; font-weight: 600; border-radius: 6px; text-decoration: none;">
+                {% if subscription.plan == 'free' %}Upgrade Plan{% else %}Change Plan{% endif %}
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Stats Grid - Mobile First (2 columns) -->
+    <div class="stats-grid">
+        <div class="stat">
+            <div class="stat-value">{{ user_stats.total_events }}</div>
+            <div class="stat-label">Events</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{{ user_stats.total_photos }}</div>
+            <div class="stat-label">Photos</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{{ user_stats.total_searches }}</div>
+            <div class="stat-label">Searches</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{{ (user_stats.total_storage_gb)|round(1) }} GB</div>
+            <div class="stat-label">Storage</div>
+        </div>
+    </div>
+    
+    <!-- Create Button -->
+    <a href="/admin/events/create" class="btn btn-primary" style="margin-bottom: 20px;">
+        + New Event
+    </a>
+    
+    <!-- Events List - Rectangle Cards with Cover -->
+    {% if events %}
+        {% for event in events %}
+        <div style="background: white; border-radius: 12px; overflow: hidden; margin-bottom: 16px; border: 1px solid #F3F4F6; max-width: 233px;">
+            <!-- Cover Image - 233x170 (700÷3 x 512÷3) -->
+            <div style="width: 100%; aspect-ratio: 700/512; background: linear-gradient(135deg, #4285F4 0%, #1a73e8 100%); position: relative; overflow: hidden;">
+                {% if event.cover_image %}
+                <img src="/events/{{ event.event_id }}/thumbnail/{{ event.cover_image }}" 
+                     style="width: 100%; height: 100%; object-fit: cover;" 
+                     onerror="this.src='/events/{{ event.event_id }}/photo/{{ event.cover_image }}'; this.onerror=function(){this.style.display='none';};">
+                {% endif %}
+                <div style="position: absolute; bottom: 12px; left: 12px; right: 12px;">
+                    <h3 style="color: white; font-size: 18px; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                        {{ event.event_name }}
+                    </h3>
+                </div>
+            </div>
+            
+            <!-- Event Info -->
+            <div style="padding: 12px;">
+                <div style="font-size: 12px; color: #6B7280; margin-bottom: 8px;">{{ event.event_date }}</div>
+                
+                <div style="font-size: 11px; color: #6B7280; margin-bottom: 12px; line-height: 1.4;">
+                    {{ event.stats.total_photos }} photos • {{ event.stats.total_faces }} faces • {{ event.stats.total_searches }} searches
+                </div>
+                
+                <div style="display: flex; gap: 4px;">
+                    <a href="/events/{{ event.event_id }}" class="btn btn-primary" style="padding: 6px 8px; font-size: 11px; flex: 1; border-radius: 6px;">
+                        Open
+                    </a>
+                    <a href="/e/{{ event.event_id }}" target="_blank" class="btn btn-secondary" style="padding: 6px 8px; font-size: 11px; flex: 1; border-radius: 6px;">
+                        Share
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="card" style="text-align: center; padding: 60px 20px;">
+            <div style="font-size: 48px; color: #E5E7EB; margin-bottom: 16px;">+</div>
+            <h3 style="margin-bottom: 8px;">No events yet</h3>
+            <p style="color: #6B7280; font-size: 14px;">Create your first event</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

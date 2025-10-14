@@ -1,0 +1,75 @@
+{% extends "cloudface_pro/base.html" %}
+
+{% block title %}My Events - {{ config.COMPANY_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div style="margin-bottom: 32px;">
+        <h1 style="font-size: 28px; font-weight: 700; color: #2D2D2D; margin-bottom: 8px;">My Events</h1>
+        <p style="font-size: 14px; color: #6B7280;">Events you've been invited to</p>
+    </div>
+    
+    {% if events %}
+    <!-- Events List - Same style as Admin -->
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+        {% for event in events %}
+        <div class="card" style="padding: 0; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" 
+             onclick="window.location.href='/e/{{ event.event_id }}'">
+            
+            <div style="display: flex; align-items: center; gap: 16px; padding: 16px;">
+                <!-- Event Cover Image (80x80px thumbnail) -->
+                <div style="width: 80px; height: 80px; flex-shrink: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; overflow: hidden;">
+                    {% if event.cover_image %}
+                    <img src="/events/{{ event.event_id }}/thumbnail/{{ event.cover_image }}" 
+                         style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white;">
+                        📸
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Event Info -->
+                <div style="flex: 1; min-width: 0;">
+                    <h3 style="font-size: 16px; font-weight: 600; color: #2D2D2D; margin-bottom: 4px;">
+                        {{ event.event_name }}
+                    </h3>
+                    <div style="font-size: 13px; color: #6B7280; margin-bottom: 8px;">
+                        {{ event.event_date }} • {{ event.stats.total_photos }} photos
+                    </div>
+                </div>
+                
+                <!-- Action Button -->
+                <div style="flex-shrink: 0;">
+                    <button class="btn btn-primary" style="padding: 8px 16px; font-size: 13px;">
+                        Find Photos →
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% else %}
+    <!-- Empty State -->
+    <div class="card" style="text-align: center; padding: 60px 20px;">
+        <div style="font-size: 64px; margin-bottom: 16px;">📸</div>
+        <h3 style="font-size: 20px; font-weight: 600; color: #2D2D2D; margin-bottom: 8px;">
+            No Events Yet
+        </h3>
+        <p style="font-size: 14px; color: #6B7280;">
+            You'll see events here once you've been invited to them
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}
+

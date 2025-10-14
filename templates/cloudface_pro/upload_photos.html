@@ -1,0 +1,186 @@
+{% extends "cloudface_pro/base.html" %}
+
+{% block title %}Upload Photos - {{ config.COMPANY_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">{{ event.event_name }}</h1>
+    <p style="font-size: 14px; color: #6B7280; margin-bottom: 24px;">{{ event.event_date }}</p>
+    
+    <!-- Drop Zone - Minimal -->
+    <div id="dropZone" class="card" style="text-align: center; padding: 40px 20px; border: 2px dashed #4285F4; cursor: pointer;">
+        <div style="font-size: 48px; color: #4285F4; margin-bottom: 12px;">+</div>
+        <div style="font-weight: 600; margin-bottom: 4px;">Add Photos</div>
+        <div style="font-size: 14px; color: #6B7280;">Tap to select or drag & drop</div>
+        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+    </div>
+    
+    <!-- File Count -->
+    <div id="fileInfo" style="display: none; margin: 16px 0; padding: 12px; background: #F9FAFB; border-radius: 8px; text-align: center;">
+        <span id="fileCount" style="font-weight: 600; color: #4285F4;">0</span> photos selected
+    </div>
+    
+    <!-- Progress -->
+    <div id="progress" style="display: none; margin: 16px 0;">
+        <div style="background: #F3F4F6; height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 8px;">
+            <div id="progressBar" style="background: #4285F4; height: 100%; width: 0%;"></div>
+        </div>
+        <div id="progressText" style="text-align: center; font-size: 14px; color: #6B7280;"></div>
+    </div>
+    
+    <!-- Processing Status -->
+    <div id="processingStatus" style="display: none; margin: 16px 0; padding: 16px; background: #F0F9FF; border: 1px solid #BFDBFE; border-radius: 8px; text-align: center;">
+        <div style="font-size: 16px; font-weight: 600; color: #1E40AF; margin-bottom: 8px;">Processing Photos</div>
+        <div id="processingText" style="font-size: 14px; color: #3730A3;">Detecting faces and generating thumbnails...</div>
+        <div style="margin-top: 12px; font-size: 12px; color: #6B7280;">You can browse other pages while this happens</div>
+    </div>
+    
+    <!-- Popup Notification -->
+    <div id="popupNotification" style="display: none; position: fixed; top: 20px; right: 20px; background: white; border: 1px solid #E5E7EB; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 20px; max-width: 300px; z-index: 1000;">
+        <div style="display: flex; align-items: center; margin-bottom: 12px;">
+            <div style="width: 40px; height: 40px; background: #10B981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                <span style="color: white; font-size: 20px;">✓</span>
+            </div>
+            <div>
+                <div style="font-weight: 600; color: #1F2937;">Processing Complete</div>
+                <div style="font-size: 12px; color: #6B7280;">Photos ready for search</div>
+            </div>
+        </div>
+        <button onclick="closePopup()" class="btn btn-primary" style="width: 100%; padding: 8px; font-size: 12px;">OK</button>
+    </div>
+    
+    <!-- Upload Button -->
+    <button id="uploadBtn" class="btn btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;">
+        Upload
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let files = [];
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const uploadBtn = document.getElementById('uploadBtn');
+const fileInfo = document.getElementById('fileInfo');
+const fileCount = document.getElementById('fileCount');
+const progress = document.getElementById('progress');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+
+dropZone.onclick = () => fileInput.click();
+
+dropZone.ondragover = (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#1a73e8';
+    dropZone.style.background = '#E8F0FE';
+};
+
+dropZone.ondragleave = () => {
+    dropZone.style.borderColor = '#4285F4';
+    dropZone.style.background = 'white';
+};
+
+dropZone.ondrop = (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#4285F4';
+    dropZone.style.background = 'white';
+    handleFiles(e.dataTransfer.files);
+};
+
+fileInput.onchange = (e) => handleFiles(e.target.files);
+
+function handleFiles(fileList) {
+    files = Array.from(fileList);
+    fileCount.textContent = files.length;
+    fileInfo.style.display = 'block';
+    uploadBtn.disabled = false;
+    uploadBtn.style.opacity = '1';
+    uploadBtn.style.cursor = 'pointer';
+}
+
+uploadBtn.onclick = async () => {
+    if (files.length === 0) return;
+    
+    uploadBtn.disabled = true;
+    progress.style.display = 'block';
+    dropZone.style.display = 'none';
+    fileInfo.style.display = 'none';
+    
+    const formData = new FormData();
+    files.forEach(f => formData.append('photos', f));
+    
+    let prog = 0;
+    const interval = setInterval(() => {
+        prog += 10;
+        if (prog <= 90) {
+            progressBar.style.width = prog + '%';
+            progressText.textContent = 'Uploading photos...';
+        }
+    }, 200);
+    
+    try {
+        const res = await fetch('/events/{{ event.event_id }}/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        clearInterval(interval);
+        const data = await res.json();
+        
+        if (data.success) {
+            progressBar.style.width = '100%';
+            progressBar.style.background = '#10B981';
+            progressText.textContent = data.message;
+            
+            // Show processing status
+            setTimeout(() => {
+                progress.style.display = 'none';
+                document.getElementById('processingStatus').style.display = 'block';
+                
+                // Start checking for completion
+                checkProcessingComplete();
+            }, 1000);
+        }
+    } catch (err) {
+        clearInterval(interval);
+        alert(err.message);
+        location.reload();
+    }
+};
+
+function closePopup() {
+    document.getElementById('popupNotification').style.display = 'none';
+}
+
+async function checkProcessingComplete() {
+    try {
+        const res = await fetch('/api/events/{{ event.event_id }}/processing-status');
+        const data = await res.json();
+        
+        if (data.completed) {
+            // Hide processing status
+            document.getElementById('processingStatus').style.display = 'none';
+            
+            // Show popup notification
+            document.getElementById('popupNotification').style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                closePopup();
+            }, 5000);
+            
+            return; // Stop checking
+        }
+        
+        // Continue checking every 2 seconds
+        setTimeout(checkProcessingComplete, 2000);
+        
+    } catch (err) {
+        console.error('Error checking processing status:', err);
+        // Continue checking anyway
+        setTimeout(checkProcessingComplete, 5000);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,697 @@
+u<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudFace Pro - AI Event Photography</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FAFBFC;
+            color: #1F2937;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid #E5E7EB;
+            z-index: 1000;
+            padding: 14px 0;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #1F2937;
+            text-decoration: none;
+        }
+        
+        .nav { display: flex; gap: 24px; align-items: center; }
+        .nav a {
+            color: #6B7280;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .nav a:hover { color: #1F2937; }
+        
+        .btn-header {
+            background: #4285F4;
+            color: #fff;
+            padding: 9px 18px;
+            border-radius: 7px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        /* Hero with Loading Animation */
+        .hero {
+            margin-top: 70px;
+            padding: 120px 20px 100px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.8) 100%), 
+                        url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1600&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            position: relative;
+        }
+        
+        .hero h1 {
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 16px;
+            color: #fff;
+            letter-spacing: -0.8px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .hero p {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 32px;
+            max-width: 560px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 50px;
+        }
+        
+        .btn { padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: #4285F4; color: #fff; }
+        .btn-primary:hover { background: #1a73e8; }
+        .btn-secondary { background: #fff; color: #1F2937; border: 1px solid #E5E7EB; }
+        .btn-secondary:hover { border-color: #4285F4; color: #4285F4; }
+        
+        /* Events - Small Colorful Cards */
+        .events {
+            padding: 60px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .section-title h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.7px;
+        }
+        
+        .section-title p {
+            font-size: 15px;
+            color: #6B7280;
+        }
+        
+        .event-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .event-card {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .event-card:hover {
+            transform: translateY(-4px);
+        }
+        
+        /* Colorful Borders */
+        .event-card.wedding { border: 3px solid #FF6B9D; }
+        .event-card.corporate { border: 3px solid #4285F4; }
+        .event-card.sports { border: 3px solid #FF9800; }
+        .event-card.music { border: 3px solid #9C27B0; }
+        .event-card.beach { border: 3px solid #00BCD4; }
+        .event-card.school { border: 3px solid #4CAF50; }
+        
+        .event-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        .event-info {
+            padding: 20px;
+        }
+        
+        .event-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        
+        .wedding .event-badge { background: #FFE5F0; color: #FF6B9D; }
+        .corporate .event-badge { background: #E3F2FD; color: #4285F4; }
+        .sports .event-badge { background: #FFF3E0; color: #FF9800; }
+        .music .event-badge { background: #F3E5F5; color: #9C27B0; }
+        .beach .event-badge { background: #E0F7FA; color: #00BCD4; }
+        .school .event-badge { background: #E8F5E9; color: #4CAF50; }
+        
+        .event-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1F2937;
+            letter-spacing: -0.3px;
+        }
+        
+        .event-card p {
+            font-size: 13px;
+            color: #6B7280;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+        
+        .event-features {
+            list-style: none;
+            font-size: 12px;
+            color: #9CA3AF;
+        }
+        
+        .event-features li {
+            margin-bottom: 4px;
+            padding-left: 16px;
+            position: relative;
+        }
+        
+        .event-features li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #4285F4;
+            font-weight: 700;
+        }
+        
+        /* How It Works */
+        .how {
+            padding: 60px 20px;
+            background: #fff;
+        }
+        
+        .steps {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+        }
+        
+        .step {
+            background: #FAFBFC;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #E5E7EB;
+            text-align: center;
+        }
+        
+        .step-num {
+            width: 40px;
+            height: 40px;
+            background: #4285F4;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 auto 14px;
+        }
+        
+        .step h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        
+        .step p {
+            font-size: 13px;
+            color: #6B7280;
+        }
+        
+        /* CTA */
+        .cta {
+            padding: 80px 20px;
+            text-align: center;
+            background: #1F2937;
+            color: #fff;
+        }
+        
+        .cta h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.7px;
+        }
+        
+        .cta p {
+            font-size: 15px;
+            opacity: 0.8;
+            margin-bottom: 32px;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #111827;
+            color: #fff;
+            padding: 50px 20px 24px;
+        }
+        
+        .footer-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .footer-col h5 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+        
+        .footer-col a {
+            display: block;
+            color: #9CA3AF;
+            text-decoration: none;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .footer-col a:hover { color: #fff; }
+        
+        .footer-bottom {
+            text-align: center;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #6B7280;
+            font-size: 12px;
+        }
+        
+        /* Loading Screen - Full Page */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.6s;
+            overflow: hidden;
+        }
+        
+        /* Photography Pattern Background */
+        .loading-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                url('data:image/svg+xml,<svg width="80" height="80" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="40" r="20" fill="none" stroke="rgba(66,133,244,0.05)" stroke-width="2"/><circle cx="40" cy="40" r="8" fill="rgba(66,133,244,0.03)"/></svg>'),
+                url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="30" height="25" rx="3" fill="none" stroke="rgba(255,152,0,0.04)" stroke-width="2"/><circle cx="30" cy="32" r="6" fill="none" stroke="rgba(255,152,0,0.04)" stroke-width="2"/><path d="M 20 15 L 25 20 L 35 20 L 40 15 Z" fill="rgba(255,152,0,0.03)"/></svg>'),
+                url('data:image/svg+xml,<svg width="50" height="50" xmlns="http://www.w3.org/2000/svg"><path d="M 15 25 Q 25 15 35 25 Q 30 35 25 40 Q 20 35 15 25" fill="rgba(66,133,244,0.02)"/></svg>');
+            background-position: 0 0, 100px 50px, 200px 100px;
+            background-size: 80px 80px, 60px 60px, 50px 50px;
+            background-repeat: repeat;
+            animation: float 20s linear infinite;
+        }
+        
+        @keyframes float {
+            0% { background-position: 0 0, 100px 50px, 200px 100px; }
+            100% { background-position: 80px 80px, 180px 130px, 280px 180px; }
+        }
+        
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loader-spinner {
+            width: 70px;
+            height: 70px;
+            border: 5px solid rgba(66, 133, 244, 0.1);
+            border-top-color: #4285F4;
+            border-right-color: #FF9800;
+            border-radius: 50%;
+            animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loader-text {
+            font-size: 17px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            letter-spacing: -0.3px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Page Content - Always Visible */
+        .page-content {
+            opacity: 1;
+        }
+        
+        /* Desktop */
+        @media (min-width: 768px) {
+            .hero h1 { font-size: 52px; letter-spacing: -1.2px; }
+            .hero p { font-size: 18px; }
+            .section-title h2 { font-size: 40px; }
+            .event-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        @media (max-width: 767px) {
+            .nav { display: none; }
+            .event-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">CloudFace Pro</a>
+            <nav class="nav">
+                <a href="#events">Events</a>
+                <a href="#how">How It Works</a>
+                <a href="/admin/login" class="btn-header" style="color: white;">Admin Login</a>
+            </nav>
+        </div>
+    </header>
+    
+    <!-- Hero -->
+    <section class="hero">
+        <h1>Event Photography,<br>Delivered by AI</h1>
+        <p>Upload photos, guests find themselves instantly. Professional photo delivery for weddings, corporate events, and celebrations.</p>
+        
+        <!-- Two Entry Points -->
+        <div style="display: flex; gap: 24px; justify-content: center; margin-top: 40px; flex-wrap: wrap;">
+            <!-- Admin Entry -->
+            <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.3); border-radius: 16px; padding: 32px; max-width: 320px; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 16px;">📤</div>
+                <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: white;">Share Event Photos</h3>
+                <p style="font-size: 14px; color: rgba(255,255,255,0.9); margin-bottom: 20px;">For photographers & event organizers</p>
+                <a href="/admin/signup" class="btn btn-primary" style="width: 100%; display: block; text-align: center;">Get Started Free</a>
+            </div>
+            
+            <!-- Guest Entry -->
+            <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.3); border-radius: 16px; padding: 32px; max-width: 320px; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: white;">Find Your Photos</h3>
+                <p style="font-size: 14px; color: rgba(255,255,255,0.9); margin-bottom: 20px;">For event guests & attendees</p>
+                <a href="/guest/login" class="btn btn-secondary" style="width: 100%; display: block; text-align: center;">Login to Find Photos</a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Events - Small Colorful Cards -->
+    <section class="events" id="events">
+        <div class="section-title">
+            <h2>Perfect for Every Event</h2>
+            <p>Professional photography delivery for any occasion</p>
+        </div>
+        
+        <div class="event-grid">
+            
+            <!-- Wedding -->
+            <div class="event-card wedding">
+                <img src="https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80" alt="Weddings" class="event-image">
+                <div class="event-info">
+                    <div class="event-badge">Weddings</div>
+                    <h3>Beautiful Moments</h3>
+                    <p>Deliver photos to 500+ guests instantly with AI face recognition.</p>
+                    <ul class="event-features">
+                        <li>Instant delivery</li>
+                        <li>Custom watermarks</li>
+                        <li>Private galleries</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Corporate -->
+            <div class="event-card corporate">
+                <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80" alt="Corporate" class="event-image">
+                <div class="event-info">
+                    <div class="event-badge">Corporate</div>
+                    <h3>Business Events</h3>
+                    <p>Conferences, seminars, and company celebrations with branding.</p>
+                    <ul class="event-features">
+                        <li>Company branding</li>
+                        <li>Secure access</li>
+                        <li>Analytics dashboard</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Sports -->
+            <div class="event-card sports">
+                <img src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600&q=80" alt="Sports" class="event-image">
+                <div class="event-info">
+                    <div class="event-badge">Sports</div>
+                    <h3>Action Shots</h3>
+                    <p>Marathons, races, tournaments. Athletes find photos fast.</p>
+                    <ul class="event-features">
+                        <li>1000+ athletes</li>
+                        <li>Real-time delivery</li>
+                        <li>Bib recognition</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Music -->
+            <div class="event-card music">
+                <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&q=80" alt="Music" class="event-image">
+                <div class="event-info">
+                    <div class="event-badge">Music</div>
+                    <h3>Festivals & Concerts</h3>
+                    <p>Capture energy and share instantly with attendees.</p>
+                    <ul class="event-features">
+                        <li>Crowd recognition</li>
+                        <li>Low-light optimized</li>
+                        <li>Social sharing</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Beach -->
+            <div class="event-card beach">
+                <img src="https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600&q=80" alt="Beach" class="event-image">
+                <div class="event-info">
+                    <div class="event-badge">Beach Parties</div>
+                    <h3>Tropical Vibes</h3>
+                    <p>Goa parties and beach celebrations made effortless.</p>
+                    <ul class="event-features">
+                        <li>Outdoor optimized</li>
+                        <li>Instant sharing</li>
+                        <li>Group photos</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- School -->
+            <div class="event-card school">
+                <img src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600&q=80" alt="School" class="event-image">
+                <div class="event-info">
+                    <div class="event-badge">Schools</div>
+                    <h3>Safe Sharing</h3>
+                    <p>Graduations and sports days with privacy protection.</p>
+                    <ul class="event-features">
+                        <li>Child-safe access</li>
+                        <li>Parent delivery</li>
+                        <li>Privacy-first</li>
+                    </ul>
+                </div>
+            </div>
+            
+        </div>
+    </section>
+    
+    <!-- How It Works -->
+    <section class="how" id="how">
+        <div class="section-title">
+            <h2>How It Works</h2>
+            <p>From camera to guests in minutes</p>
+        </div>
+        
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h4>Create Event</h4>
+                <p>Set up in 60 seconds</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h4>Upload Photos</h4>
+                <p>AI processes faces</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h4>Share Link</h4>
+                <p>Send to guests</p>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <h4>Instant Delivery</h4>
+                <p>Guests find photos</p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Guest Find Photos Section -->
+    <section id="guest-find" style="padding: 60px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center;">
+        <div style="max-width: 600px; margin: 0 auto;">
+            <div style="font-size: 56px; margin-bottom: 20px;">🔍</div>
+            <h2 style="font-size: 32px; font-weight: 700; margin-bottom: 12px;">Find Your Event Photos</h2>
+            <p style="font-size: 16px; margin-bottom: 32px; opacity: 0.9;">Have an event link? Paste it below to find your photos</p>
+            
+            <div style="background: white; padding: 8px; border-radius: 12px; display: flex; gap: 8px; max-width: 500px; margin: 0 auto;">
+                <input type="text" id="eventLinkInput" placeholder="Paste event link here..." 
+                       style="flex: 1; border: none; padding: 12px 16px; font-size: 14px; border-radius: 8px; outline: none;">
+                <button onclick="goToEvent()" class="btn btn-primary" style="padding: 12px 24px; white-space: nowrap;">
+                    Go →
+                </button>
+            </div>
+            
+            <div style="margin-top: 20px; font-size: 13px; opacity: 0.8;">
+                Example: http://yoursite.com/e/abc123
+            </div>
+        </div>
+    </section>
+    
+    <!-- CTA -->
+    <section class="cta">
+        <h2>Ready to get started?</h2>
+        <p>Join professional photographers using CloudFace Pro</p>
+        <div class="hero-buttons">
+            <a href="/admin/signup" class="btn btn-primary">Start Free Trial</a>
+            <a href="/admin/login" class="btn btn-secondary">Admin Sign In</a>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h5>Product</h5>
+                <a href="/login">Dashboard</a>
+                <a href="/signup">Sign Up</a>
+            </div>
+            <div class="footer-col">
+                <h5>Legal</h5>
+                <a href="/terms">Terms</a>
+                <a href="/privacy">Privacy</a>
+            </div>
+            <div class="footer-col">
+                <h5>Contact</h5>
+                <a href="mailto:support@cloudface.pro">support@cloudface.pro</a>
+                <a href="tel:+919876543210">+91 98765 43210</a>
+            </div>
+        </div>
+        <div class="footer-bottom">© 2025 CloudFace Pro</div>
+    </footer>
+    
+    <script>
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+        
+        // Guest event link navigation
+        function goToEvent() {
+            const input = document.getElementById('eventLinkInput');
+            const link = input.value.trim();
+            
+            if (!link) {
+                alert('Please paste an event link');
+                return;
+            }
+            
+            // Extract event ID from various link formats
+            let eventId = null;
+            
+            // Format: http://localhost:5002/e/abc123 or https://site.com/e/abc123
+            if (link.includes('/e/')) {
+                eventId = link.split('/e/')[1].split('?')[0].split('#')[0];
+            }
+            // Format: just the event ID (abc123)
+            else if (link.length > 5 && link.length < 20 && !link.includes(' ')) {
+                eventId = link;
+            }
+            
+            if (eventId) {
+                window.location.href = `/e/${eventId}`;
+            } else {
+                alert('Invalid event link. Please check and try again.');
+            }
+        }
+        
+        // Allow Enter key to submit
+        document.getElementById('eventLinkInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                goToEvent();
+            }
+        });
+    </script>
+</body>
+</html>

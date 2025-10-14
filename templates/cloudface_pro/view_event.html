@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ event.event_name }} - {{ config.COMPANY_NAME }}</title>
+</head>
+<body style="font-family: -apple-system, sans-serif; margin: 0; padding: 0; background: #F8F9FA;">
+    {% include 'cloudface_pro/components/header.html' %}
+    
+    <div style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+        <!-- Event Header -->
+        <div style="margin-bottom: 30px;">
+            <h1 style="color: #1F2937; margin-bottom: 10px;">{{ event.event_name }}</h1>
+            <p style="color: #6B7280;">{{ event.event_date }}</p>
+        </div>
+        
+        <!-- Stats Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="color: #6B7280; font-size: 14px; margin-bottom: 5px;">Photos</div>
+                <div style="font-size: 28px; font-weight: 700; color: {{ config.THEME_COLORS.primary }};">
+                    {{ event.stats.total_photos }}
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="color: #6B7280; font-size: 14px; margin-bottom: 5px;">Faces Detected</div>
+                <div style="font-size: 28px; font-weight: 700; color: {{ config.THEME_COLORS.success }};">
+                    {{ event.stats.total_faces }}
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="color: #6B7280; font-size: 14px; margin-bottom: 5px;">Searches</div>
+                <div style="font-size: 28px; font-weight: 700; color: {{ config.THEME_COLORS.secondary }};">
+                    {{ event.stats.total_searches }}
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="color: #6B7280; font-size: 14px; margin-bottom: 5px;">Downloads</div>
+                <div style="font-size: 28px; font-weight: 700; color: #10B981;">
+                    {{ event.stats.total_downloads }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Share Link -->
+        <div style="background: {{ config.THEME_COLORS.secondary }}; padding: 30px; border-radius: 12px; color: white; margin-bottom: 30px;">
+            <h3 style="margin-bottom: 15px;">Share Event with Clients</h3>
+            <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px; word-break: break-all; font-family: monospace;">
+                {{ request.host_url }}e/{{ event.event_id }}
+            </div>
+            <button id="copyLinkBtn" 
+                    style="background: white; color: {{ config.THEME_COLORS.secondary }}; padding: 12px 30px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                Copy Link
+            </button>
+        </div>
+        
+        <!-- Photo Gallery -->
+        <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 30px;">
+            <h2 style="color: #1F2937; margin-bottom: 20px;">Event Photos ({{ photos|length }})</h2>
+            
+            {% if photos %}
+            <div id="photoGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px;">
+                {% for photo in photos[:20] %}
+                <div style="background: #F9FAFB; border-radius: 8px; overflow: hidden; aspect-ratio: 1;">
+                    <img src="/events/{{ event.event_id }}/thumbnail/{{ photo }}" 
+                         style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% if photos|length > 20 %}
+            <div style="text-align: center; margin-top: 20px;">
+                <div style="color: #6B7280; margin-bottom: 15px;">
+                    Showing <span id="visibleCount">20</span> of {{ photos|length }} photos
+                </div>
+                <button id="loadMoreBtn" 
+                        onclick="loadMorePhotos()"
+                        style="background: {{ config.THEME_COLORS.primary }}; color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    Load More Photos
+                </button>
+            </div>
+            {% endif %}
+            {% else %}
+            <p style="color: #6B7280; text-align: center; padding: 40px;">
+                No photos uploaded yet
+            </p>
+            {% endif %}
+        </div>
+        
+        <!-- Actions -->
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <a href="/events/{{ event.event_id }}/upload" 
+               style="background: {{ config.THEME_COLORS.primary }}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+                Upload More Photos
+            </a>
+            <a href="/dashboard" 
+               style="background: white; color: {{ config.THEME_COLORS.primary }}; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; border: 2px solid {{ config.THEME_COLORS.primary }};">
+                Back to Dashboard
+            </a>
+            <button onclick="if(confirm('Delete this event and all photos?')) { deleteEvent(); }"
+                    style="background: {{ config.THEME_COLORS.danger }}; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-left: auto;">
+                Delete Event
+            </button>
+        </div>
+    </div>
+    
+    {% include 'cloudface_pro/components/footer.html' %}
+    
+    <script>
+    // Copy link
+    document.getElementById('copyLinkBtn').addEventListener('click', () => {
+        const link = '{{ request.host_url }}e/{{ event.event_id }}';
+        navigator.clipboard.writeText(link).then(() => {
+            const btn = document.getElementById('copyLinkBtn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => {
+                btn.textContent = 'Copy Link';
+            }, 2000);
+        });
+    });
+    
+    // Delete event
+    async function deleteEvent() {
+        const response = await fetch('/events/{{ event.event_id }}/delete', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            window.location.href = '/dashboard';
+        }
+    }
+    
+    // Load more photos
+    let visibleCount = 20;
+    const allPhotos = {{ photos|tojson }};
+    
+    function loadMorePhotos() {
+        const loadMore = 20; // Load 20 more at a time
+        const startIndex = visibleCount;
+        const endIndex = Math.min(visibleCount + loadMore, allPhotos.length);
+        
+        // Add new photos to grid
+        const photoGrid = document.getElementById('photoGrid');
+        for (let i = startIndex; i < endIndex; i++) {
+            const photoDiv = document.createElement('div');
+            photoDiv.style.cssText = 'background: #F9FAFB; border-radius: 8px; overflow: hidden; aspect-ratio: 1;';
+            photoDiv.innerHTML = `<img src="/events/{{ event.event_id }}/thumbnail/${allPhotos[i]}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            photoGrid.appendChild(photoDiv);
+        }
+        
+        visibleCount = endIndex;
+        
+        // Update counter
+        document.getElementById('visibleCount').textContent = visibleCount;
+        
+        // Hide button if all photos shown
+        if (visibleCount >= allPhotos.length) {
+            document.getElementById('loadMoreBtn').style.display = 'none';
+            document.querySelector('div').style.color = '#10B981';
+            document.querySelector('div').innerHTML = `All ${allPhotos.length} photos loaded!`;
+        }
+    }
+    </script>
+</body>
+</html>
+

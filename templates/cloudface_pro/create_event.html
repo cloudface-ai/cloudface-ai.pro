@@ -1,0 +1,277 @@
+{% extends "cloudface_pro/base.html" %}
+
+{% block title %}Create Event - {{ config.COMPANY_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 24px;">New Event</h1>
+    
+    <form id="createEventForm">
+        <!-- Basic Info -->
+        <div class="card">
+            <div style="margin-bottom: 20px;">
+                <label class="label">Event Name</label>
+                <input type="text" name="event_name" class="input" placeholder="Wedding Reception" required>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label class="label">Date</label>
+                <input type="date" name="event_date" class="input" required>
+            </div>
+            
+            <div>
+                <label class="label">Type</label>
+                <select name="event_type" class="input">
+                    <option value="wedding">Wedding</option>
+                    <option value="birthday">Birthday</option>
+                    <option value="corporate">Corporate</option>
+                    <option value="concert">Concert</option>
+                    <option value="sports">Sports</option>
+                    <option value="party">Party</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Branding (Collapsible) -->
+        <div class="card">
+            <div style="margin-bottom: 16px; font-weight: 600;">Branding</div>
+            
+            <div style="margin-bottom: 16px;">
+                <label class="label">Company Name</label>
+                <input type="text" name="company_name" class="input" placeholder="Optional">
+            </div>
+            
+            <div>
+                <label class="label">Logo</label>
+                <input type="file" name="logo" accept="image/*" class="input">
+            </div>
+        </div>
+        
+        <!-- Settings -->
+        <div class="card">
+            <div style="margin-bottom: 16px; font-weight: 600;">Privacy & Access</div>
+            
+            <!-- Public Toggle -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #F3F4F6;">
+                <div>
+                    <div style="font-weight: 500; margin-bottom: 2px;">Public Event</div>
+                    <div style="font-size: 13px; color: #6B7280;">Anyone can access</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="is_public" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <!-- PIN Toggle -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #F3F4F6;">
+                <div>
+                    <div style="font-weight: 500; margin-bottom: 2px;">PIN Protection</div>
+                    <div style="font-size: 13px; color: #6B7280;">Secure with PIN</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="enable_pin" id="pinToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <!-- PIN Fields (Hidden) -->
+            <div id="pinFields" style="display: none; padding: 16px 0;">
+                <div style="margin-bottom: 12px;">
+                    <label class="label">Guest PIN (View only)</label>
+                    <input type="text" name="guest_pin" class="input" placeholder="4 digits" pattern="[0-9]{4}" maxlength="4">
+                </div>
+                <div>
+                    <label class="label">Full PIN (Download)</label>
+                    <input type="text" name="full_access_pin" class="input" placeholder="4 digits" pattern="[0-9]{4}" maxlength="4">
+                </div>
+            </div>
+            
+            <!-- Watermark Toggle -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
+                <div>
+                    <div style="font-weight: 500; margin-bottom: 2px;">Watermark</div>
+                    <div style="font-size: 13px; color: #6B7280;">Add branding to downloads</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="enable_watermark" id="watermarkToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Watermark Settings (Hidden by default) -->
+        <div id="watermarkSettings" class="card" style="display: none;">
+            <div style="margin-bottom: 16px; font-weight: 600;">Watermark Configuration</div>
+            
+            <div style="margin-bottom: 16px;">
+                <div class="label">Watermark Type</div>
+                <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="watermark_type" value="text" checked style="margin-right: 8px;">
+                        <span>Text</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="watermark_type" value="logo" style="margin-right: 8px;">
+                        <span>Logo</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div id="textWatermark" style="margin-bottom: 16px;">
+                <div class="label">Watermark Text</div>
+                <input type="text" name="watermark_text" class="input" placeholder="© Your Photography Studio" value="">
+                <div class="help-text">Text that will appear on downloaded photos</div>
+            </div>
+            
+            <div id="logoWatermark" style="display: none; margin-bottom: 16px;">
+                <div class="label">Watermark Logo</div>
+                <input type="file" name="watermark_logo" accept="image/*" class="input">
+                <div class="help-text">Upload a PNG logo with transparent background (recommended: 200x100px)</div>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <div class="label">Position</div>
+                <select name="watermark_position" class="input">
+                    <option value="bottom_left" selected>Bottom Left</option>
+                    <option value="bottom_right">Bottom Right</option>
+                    <option value="top_left">Top Left</option>
+                    <option value="top_right">Top Right</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <div class="label">Opacity: <span id="opacityValue">70%</span></div>
+                <input type="range" name="watermark_opacity" id="opacitySlider" min="10" max="100" value="70" style="width: 100%;">
+                <div class="help-text">How transparent the watermark appears</div>
+            </div>
+        </div>
+        
+        <!-- Submit -->
+        <button type="submit" class="btn btn-primary">
+            Create Event
+        </button>
+    </form>
+</div>
+
+<style>
+/* Minimal Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #E5E7EB;
+    border-radius: 28px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background: white;
+    border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+    background: #4285F4;
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+/* Desktop Improvements */
+@media (min-width: 768px) {
+    .container {
+        max-width: 600px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// PIN toggle
+document.getElementById('pinToggle').addEventListener('change', function() {
+    document.getElementById('pinFields').style.display = this.checked ? 'block' : 'none';
+});
+
+// Watermark toggle
+document.getElementById('watermarkToggle').addEventListener('change', function() {
+    const watermarkSettings = document.getElementById('watermarkSettings');
+    watermarkSettings.style.display = this.checked ? 'block' : 'none';
+});
+
+// Watermark type toggle
+document.querySelectorAll('input[name="watermark_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const textWatermark = document.getElementById('textWatermark');
+        const logoWatermark = document.getElementById('logoWatermark');
+        
+        if (this.value === 'text') {
+            textWatermark.style.display = 'block';
+            logoWatermark.style.display = 'none';
+        } else {
+            textWatermark.style.display = 'none';
+            logoWatermark.style.display = 'block';
+        }
+    });
+});
+
+// Opacity slider
+document.getElementById('opacitySlider').addEventListener('input', function() {
+    document.getElementById('opacityValue').textContent = this.value + '%';
+});
+
+// Form submit
+document.getElementById('createEventForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+    
+    try {
+        const res = await fetch('/events/create', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            window.location.href = data.redirect;
+        } else {
+            alert(data.error || 'Error');
+            btn.disabled = false;
+            btn.textContent = 'Create Event';
+        }
+    } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
+        btn.textContent = 'Create Event';
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In - {{ event.event_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #FAFBFC;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            border: 1px solid #E8EAED;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2D2D2D;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #6B7280;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #2D2D2D;
+            margin-bottom: 8px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #E8EAED;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #2D2D2D;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #2D2D2D;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: #1a1a1a;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #6B7280;
+        }
+        
+        .link a {
+            color: #2D2D2D;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .link a:hover {
+            text-decoration: underline;
+        }
+        
+        .error {
+            background: #FEE2E2;
+            color: #DC2626;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome Back!</h1>
+            <p>Log in to find your event photos</p>
+        </div>
+        
+        <div id="errorMsg" class="error"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="your@email.com" autofocus>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
+            </div>
+            
+            <button type="submit" id="submitBtn" class="btn">Log In</button>
+        </form>
+        
+        <div class="link">
+            Don't have an account? <a href="/guest/signup">Sign up</a>
+        </div>
+    </div>
+    
+    <script>
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Logging in...';
+        errorMsg.style.display = 'none';
+        
+        const formData = new FormData(form);
+        
+        try {
+            const response = await fetch('/guest/login', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                window.location.href = data.redirect;
+            } else {
+                errorMsg.textContent = data.error || 'Login failed';
+                errorMsg.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Log In';
+            }
+        } catch (error) {
+            errorMsg.textContent = 'Network error. Please try again.';
+            errorMsg.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Log In';
+        }
+    });
+    </script>
+</body>
+</html>
+

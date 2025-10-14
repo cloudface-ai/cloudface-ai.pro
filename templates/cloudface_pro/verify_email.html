@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - {{ config.COMPANY_NAME }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #FAFBFC;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 480px;
+            width: 100%;
+            border: 1px solid #E8EAED;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2D2D2D;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #6B7280;
+            line-height: 1.5;
+        }
+        
+        .email-display {
+            background: #F3F4F6;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 14px;
+            color: #4B5563;
+            margin-bottom: 24px;
+        }
+        
+        .code-inputs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        
+        .code-input {
+            width: 50px;
+            height: 60px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            border: 2px solid #E8EAED;
+            border-radius: 8px;
+            font-family: 'Inter', monospace;
+            transition: border-color 0.2s;
+        }
+        
+        .code-input:focus {
+            outline: none;
+            border-color: #2D2D2D;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #2D2D2D;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: #1a1a1a;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .resend {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #6B7280;
+        }
+        
+        .resend button {
+            background: none;
+            border: none;
+            color: #2D2D2D;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 14px;
+        }
+        
+        .error {
+            background: #FEE2E2;
+            color: #DC2626;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+            text-align: center;
+        }
+        
+        .success {
+            background: #D1FAE5;
+            color: #059669;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="font-size: 56px; margin-bottom: 16px;">📧</div>
+            <h1>Verify Your Email</h1>
+            <p>We sent a 6-digit code to your email</p>
+        </div>
+        
+        <div class="email-display">
+            {{ email }}
+        </div>
+        
+        <div id="errorMsg" class="error"></div>
+        <div id="successMsg" class="success"></div>
+        
+        <form id="verifyForm">
+            <div class="code-inputs">
+                <input type="text" maxlength="1" class="code-input" id="code1" autofocus>
+                <input type="text" maxlength="1" class="code-input" id="code2">
+                <input type="text" maxlength="1" class="code-input" id="code3">
+                <input type="text" maxlength="1" class="code-input" id="code4">
+                <input type="text" maxlength="1" class="code-input" id="code5">
+                <input type="text" maxlength="1" class="code-input" id="code6">
+            </div>
+            
+            <button type="submit" id="submitBtn" class="btn">Verify Email</button>
+        </form>
+        
+        <div class="resend">
+            Didn't receive the code? <button id="resendBtn" onclick="resendCode()">Resend</button>
+        </div>
+    </div>
+    
+    <script>
+    const inputs = document.querySelectorAll('.code-input');
+    const form = document.getElementById('verifyForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const successMsg = document.getElementById('successMsg');
+    
+    // Auto-focus next input
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            if (e.target.value.length === 1 && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+            }
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                inputs[index - 1].focus();
+            }
+        });
+        
+        // Only allow numbers
+        input.addEventListener('keypress', (e) => {
+            if (!/[0-9]/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+    });
+    
+    // Form submission
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Get code from inputs
+        const code = Array.from(inputs).map(input => input.value).join('');
+        
+        if (code.length !== 6) {
+            errorMsg.textContent = 'Please enter all 6 digits';
+            errorMsg.style.display = 'block';
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Verifying...';
+        errorMsg.style.display = 'none';
+        successMsg.style.display = 'none';
+        
+        try {
+            const response = await fetch('/admin/verify-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                successMsg.textContent = '✅ Email verified! Redirecting...';
+                successMsg.style.display = 'block';
+                setTimeout(() => {
+                    window.location.href = data.redirect;
+                }, 1500);
+            } else {
+                errorMsg.textContent = data.error || 'Verification failed';
+                errorMsg.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Verify Email';
+                
+                // Clear inputs
+                inputs.forEach(input => input.value = '');
+                inputs[0].focus();
+            }
+        } catch (error) {
+            errorMsg.textContent = 'Network error. Please try again.';
+            errorMsg.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Verify Email';
+        }
+    });
+    
+    // Resend code
+    async function resendCode() {
+        const resendBtn = document.getElementById('resendBtn');
+        resendBtn.disabled = true;
+        resendBtn.textContent = 'Sending...';
+        
+        try {
+            const response = await fetch('/admin/resend-verification', {
+                method: 'POST'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                successMsg.textContent = 'New code sent! Check your email.';
+                successMsg.style.display = 'block';
+                setTimeout(() => {
+                    successMsg.style.display = 'none';
+                }, 3000);
+            } else {
+                errorMsg.textContent = data.error || 'Failed to resend';
+                errorMsg.style.display = 'block';
+            }
+        } catch (error) {
+            errorMsg.textContent = 'Network error';
+            errorMsg.style.display = 'block';
+        } finally {
+            resendBtn.disabled = false;
+            resendBtn.textContent = 'Resend';
+        }
+    }
+    </script>
+</body>
+</html>
+

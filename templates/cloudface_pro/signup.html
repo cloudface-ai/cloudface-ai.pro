@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Sign Up - {{ config.COMPANY_NAME }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #FAFBFC;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            border: 1px solid #E8EAED;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2D2D2D;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #6B7280;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #2D2D2D;
+            margin-bottom: 8px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #E8EAED;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #2D2D2D;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #2D2D2D;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: #1a1a1a;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #6B7280;
+        }
+        
+        .link a {
+            color: #2D2D2D;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .link a:hover {
+            text-decoration: underline;
+        }
+        
+        .error {
+            background: #FEE2E2;
+            color: #DC2626;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Create Admin Account</h1>
+            <p>Start sharing event photos with AI</p>
+        </div>
+        
+        <div id="error" class="error"></div>
+        
+        <form id="signupForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="your@email.com" autofocus>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Minimum 6 characters" minlength="6">
+            </div>
+            
+            <button type="submit" id="submitBtn" class="btn">Sign Up</button>
+        </form>
+        
+        <div class="link">
+            Already have an account? <a href="/admin/login">Log in</a>
+        </div>
+    </div>
+    
+    <script>
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const btn = e.target.querySelector('button');
+        const errorDiv = document.getElementById('error');
+        
+        btn.disabled = true;
+        btn.textContent = 'Creating account...';
+        errorDiv.style.display = 'none';
+        
+        try {
+            const res = await fetch('/signup', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                window.location.href = data.redirect;
+            } else {
+                errorDiv.textContent = data.error;
+                errorDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Sign Up';
+            }
+        } catch (err) {
+            errorDiv.textContent = 'Error: ' + err.message;
+            errorDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Sign Up';
+        }
+    });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capture Your Selfie - CloudFace Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #FAFBFC;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            border: 1px solid #E8EAED;
+            margin-bottom: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2D2D2D;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #6B7280;
+        }
+        
+        .guide {
+            background: #F9FAFB;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .guide h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2D2D2D;
+            margin-bottom: 12px;
+        }
+        
+        .guide-item {
+            display: flex;
+            align-items: start;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #4B5563;
+        }
+        
+        .guide-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .icon {
+            flex-shrink: 0;
+            font-size: 20px;
+        }
+        
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 24px;
+            aspect-ratio: 1;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #canvas {
+            display: none;
+        }
+        
+        .preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #2D2D2D;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: background 0.2s;
+            margin-bottom: 12px;
+        }
+        
+        .btn:hover {
+            background: #1a1a1a;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #2D2D2D;
+            border: 1px solid #E8EAED;
+        }
+        
+        .btn-secondary:hover {
+            background: #F9FAFB;
+        }
+        
+        .or-divider {
+            text-align: center;
+            color: #6B7280;
+            font-size: 13px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>📸 Capture Your Selfie</h1>
+                <p>This helps us find your photos in all your events</p>
+            </div>
+            
+            <!-- Selfie Guide -->
+            <div class="guide">
+                <h3>For Best Results:</h3>
+                <div class="guide-item">
+                    <span class="icon">👀</span>
+                    <span>Look directly at the camera</span>
+                </div>
+                <div class="guide-item">
+                    <span class="icon">💡</span>
+                    <span>Use good lighting (face the light source)</span>
+                </div>
+                <div class="guide-item">
+                    <span class="icon">🤳</span>
+                    <span>Show your full face (no sunglasses/masks)</span>
+                </div>
+                <div class="guide-item">
+                    <span class="icon">🔒</span>
+                    <span>Only your face visible (protects others' privacy)</span>
+                </div>
+            </div>
+            
+            <!-- Camera/Preview -->
+            <div class="camera-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+                <img id="preview" class="preview" style="display: none;">
+            </div>
+            
+            <!-- Capture Controls -->
+            <div id="captureControls">
+                <button id="captureBtn" class="btn">📷 Capture Selfie</button>
+                
+                <div class="or-divider">or</div>
+                
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <button id="uploadBtn" class="btn btn-secondary">Upload from Gallery</button>
+            </div>
+            
+            <!-- After Capture Controls -->
+            <div id="afterCaptureControls" style="display: none;">
+                <button id="retakeBtn" class="btn btn-secondary">🔄 Retake</button>
+                <button id="confirmBtn" class="btn">✓ Looks Good, Continue</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const preview = document.getElementById('preview');
+    const captureBtn = document.getElementById('captureBtn');
+    const retakeBtn = document.getElementById('retakeBtn');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const captureControls = document.getElementById('captureControls');
+    const afterCaptureControls = document.getElementById('afterCaptureControls');
+    
+    let stream = null;
+    let capturedBlob = null;
+    
+    // Start camera
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'user' },
+                audio: false 
+            });
+            video.srcObject = stream;
+        } catch (error) {
+            console.error('Camera access error:', error);
+            alert('Unable to access camera. Please use "Upload from Gallery" instead.');
+        }
+    }
+    
+    // Capture photo
+    captureBtn.addEventListener('click', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        canvas.toBlob((blob) => {
+            capturedBlob = blob;
+            preview.src = URL.createObjectURL(blob);
+            
+            // Show preview, hide video
+            video.style.display = 'none';
+            preview.style.display = 'block';
+            captureControls.style.display = 'none';
+            afterCaptureControls.style.display = 'block';
+            
+            // Stop camera
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        }, 'image/jpeg', 0.9);
+    });
+    
+    // Retake photo
+    retakeBtn.addEventListener('click', () => {
+        video.style.display = 'block';
+        preview.style.display = 'none';
+        captureControls.style.display = 'block';
+        afterCaptureControls.style.display = 'none';
+        capturedBlob = null;
+        startCamera();
+    });
+    
+    // Upload from gallery
+    uploadBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        capturedBlob = file;
+        preview.src = URL.createObjectURL(file);
+        
+        // Show preview
+        video.style.display = 'none';
+        preview.style.display = 'block';
+        captureControls.style.display = 'none';
+        afterCaptureControls.style.display = 'block';
+        
+        // Stop camera
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+    
+    // Confirm and upload
+    confirmBtn.addEventListener('click', async () => {
+        if (!capturedBlob) return;
+        
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Uploading...';
+        
+        const formData = new FormData();
+        formData.append('selfie', capturedBlob, 'selfie.jpg');
+        
+        try {
+            const response = await fetch('/guest/capture-selfie/{{ event.event_id }}', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                window.location.href = data.redirect;
+            } else {
+                alert(data.error || 'Failed to upload selfie');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '✓ Looks Good, Continue';
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '✓ Looks Good, Continue';
+        }
+    });
+    
+    // Start camera on page load
+    startCamera();
+    </script>
+</body>
+</html>
+
