@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Process Welcome - Test Layout</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+
+        /* Company Logo Section */
+        .company-logo-section {
+            margin-bottom: 30px;
+        }
+
+        .company-logo {
+            max-width: 200px;
+            max-height: 100px;
+            object-fit: contain;
+            border-radius: 12px;
+            border: 2px solid #e0e0e0;
+            padding: 10px;
+            background: white;
+        }
+
+        .company-name {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-top: 15px;
+        }
+
+        /* Event Info */
+        .event-icon {
+            font-size: 80px;
+            margin: 20px 0;
+        }
+
+        .event-name {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a73e8;
+            margin-bottom: 10px;
+        }
+
+        .event-date {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .ready-message {
+            font-size: 20px;
+            color: #34a853;
+            font-weight: 500;
+            margin: 20px 0;
+        }
+
+        .description {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+
+        .cta-button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            background: #0d47a1;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26, 115, 232, 0.4);
+        }
+
+        /* Features Section */
+        .features-section {
+            margin-top: 30px;
+            padding: 20px 0;
+            background: #fafafa;
+            border-radius: 12px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            text-align: left;
+            padding: 0 20px;
+        }
+
+        .feature-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .feature-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .feature-content {
+            flex: 1;
+        }
+
+        .feature-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .feature-desc {
+            font-size: 10px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        /* Footer Section with QR and Logo */
+        .footer-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .qr-section {
+            flex: 1;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .qr-code {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 4px;
+            background: white;
+        }
+
+        .qr-label {
+            font-size: 9px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .branding-section {
+            flex: 1;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .powered-by {
+            font-size: 9px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .cloudface-logo {
+            width: 100px;
+            height: auto;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .event-name {
+                font-size: 24px;
+            }
+
+            .company-logo {
+                max-width: 150px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .footer-content {
+                flex-direction: column;
+            }
+
+            .qr-section,
+            .branding-section {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Company Logo (if uploaded) -->
+        <div class="company-logo-section">
+            <img src="https://via.placeholder.com/200x80?text=Jain+Amar+Clothing" 
+                 alt="Jain Amar Clothing Pvt. Ltd." 
+                 class="company-logo">
+            <div class="company-name">Jain Amar Clothing Pvt. Ltd.</div>
+        </div>
+
+        <!-- Event Name (NO EMOJI) -->
+        <h1 class="event-name">Navratri Celebration 2025</h1>
+
+        <!-- Event Date (if provided) -->
+        <div class="event-date">October 10, 2025</div>
+
+        <!-- Ready Message -->
+        <div class="ready-message">✅ Photos are ready!</div>
+
+        <!-- Description -->
+        <p class="description">
+            Your photos have been processed and are ready to search. 
+            Upload a selfie to instantly find yourself in all the event photos!
+        </p>
+
+        <!-- Call to Action Button -->
+        <button class="cta-button" onclick="alert('Opening app...')">
+            Find My Photos
+        </button>
+
+        <!-- Features Section (small text) -->
+        <div class="features-section">
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">🎯</div>
+                    <div class="feature-content">
+                        <div class="feature-title">Find Yourself Instantly</div>
+                        <div class="feature-desc">Upload a selfie and our AI will find all photos containing you</div>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-content">
+                        <div class="feature-title">Fast & Accurate</div>
+                        <div class="feature-desc">Advanced AI technology scans thousands of photos in minutes</div>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">🔒</div>
+                    <div class="feature-content">
+                        <div class="feature-title">100% Private</div>
+                        <div class="feature-desc">Your photos stay in Google Drive. We only analyze, never store</div>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">💾</div>
+                    <div class="feature-content">
+                        <div class="feature-title">Easy Download</div>
+                        <div class="feature-desc">Download all your photos in one click after finding them</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer: QR Code + CloudFace AI Branding (very small) -->
+        <div class="footer-section">
+            <div class="footer-content">
+                <!-- QR Code Section -->
+                <div class="qr-section">
+                    <img src="https://via.placeholder.com/80?text=QR" 
+                         alt="Share QR Code" 
+                         class="qr-code">
+                    <div class="qr-label">Scan to share</div>
+                </div>
+
+                <!-- CloudFace AI Branding -->
+                <div class="branding-section">
+                    <div class="powered-by">Powered by</div>
+                    <img src="https://via.placeholder.com/100x25?text=CloudFace+AI" 
+                         alt="CloudFace AI" 
+                         class="cloudface-logo">
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
