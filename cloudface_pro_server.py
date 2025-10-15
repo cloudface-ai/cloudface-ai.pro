@@ -571,7 +571,7 @@ def admin_create_event():
         return jsonify({
             'success': True,
             'event_id': event_id,
-            'redirect': f'/admin/events/{event_id}'
+            'redirect': f'/events/{event_id}/upload'
         })
     
     return render_template('cloudface_pro/create_event.html')
