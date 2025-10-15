@@ -13,8 +13,9 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict
 import cloudface_pro_config as config
 
-# Testing mode - print emails instead of sending
-TESTING_MODE = os.environ.get('TESTING_MODE', 'true').lower() == 'true'
+# Email testing mode - separate from auth testing
+# Use EMAIL_TESTING_MODE to control email behavior independently
+EMAIL_TESTING_MODE = os.environ.get('EMAIL_TESTING_MODE', os.environ.get('TESTING_MODE', 'true')).lower() == 'true'
 
 
 class EmailService:
@@ -31,7 +32,7 @@ class EmailService:
         self.smtp_password = os.environ.get('SMTP_PASSWORD', '')
         self.from_email = os.environ.get('FROM_EMAIL', config.CONTACT_EMAIL)
         
-        if TESTING_MODE:
+        if EMAIL_TESTING_MODE:
             print("🧪 Email Service: Testing Mode (emails printed, not sent)")
         else:
             print(f"📧 Email Service: Production Mode ({self.smtp_server})")
@@ -154,7 +155,7 @@ class EmailService:
         </html>
         """
         
-        if TESTING_MODE:
+        if EMAIL_TESTING_MODE:
             # Testing mode - just print the email
             print("\n" + "="*70)
             print("📧 EMAIL (Testing Mode - Not Actually Sent)")
@@ -242,7 +243,7 @@ class EmailService:
         </html>
         """
         
-        if TESTING_MODE:
+        if EMAIL_TESTING_MODE:
             print(f"📧 Welcome email would be sent to {email}")
             return True
         else:
