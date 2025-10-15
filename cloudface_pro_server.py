@@ -22,6 +22,12 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 
+# Session configuration for production (behind Cloudflare/Nginx)
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True only if using HTTPS directly
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
+
 # Make config available to templates
 @app.context_processor
 def inject_config():
@@ -119,6 +125,7 @@ def admin_login():
         
         if result:
             # Store in session
+            session.permanent = True  # Make session last 24 hours
             session['user_id'] = result['user_id']
             session['user_email'] = result['email']
             session['token'] = result['token']
@@ -191,6 +198,7 @@ def admin_verify_email():
                 session.pop('pending_verification_password', None)
                 
                 # Log in user
+                session.permanent = True  # Make session last 24 hours
                 session['user_id'] = result['user_id']
                 session['user_email'] = result['email']
                 session['token'] = result['token']
@@ -254,6 +262,7 @@ def guest_login():
         
         if result:
             # Store in session
+            session.permanent = True  # Make session last 24 hours
             session['guest_id'] = result['guest_id']
             session['guest_email'] = result['email']
             session['guest_name'] = result['name']
@@ -284,6 +293,7 @@ def guest_signup():
         
         if result:
             # Store in session
+            session.permanent = True  # Make session last 24 hours
             session['guest_id'] = result['guest_id']
             session['guest_email'] = result['email']
             session['guest_name'] = result['name']
