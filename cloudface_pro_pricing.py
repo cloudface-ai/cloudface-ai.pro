@@ -24,10 +24,12 @@ PLANS = {
         'storage_gb': 1,
         'max_photos': 1000,
         'max_events': 1,
+        'max_upload_batch': 50,  # Max files per upload
         'features': [
             '1 GB storage',
             '1,000 photos',
             '1 event',
+            'Upload 50 photos at once',
             'Basic face recognition',
             'Watermark support'
         ]
@@ -39,10 +41,12 @@ PLANS = {
         'storage_gb': 10,
         'max_photos': 20000,
         'max_events': 10,
+        'max_upload_batch': 100,  # Max files per upload
         'features': [
             '10 GB storage',
             '20,000 photos',
             '10 events',
+            'Upload 100 photos at once',
             'Advanced face recognition',
             'Custom watermarks',
             'Email support'
@@ -55,10 +59,12 @@ PLANS = {
         'storage_gb': 50,
         'max_photos': 100000,
         'max_events': 50,
+        'max_upload_batch': 200,  # Max files per upload
         'features': [
             '50 GB storage',
             '100,000 photos',
             '50 events',
+            'Upload 200 photos at once',
             'Advanced face recognition',
             'Custom watermarks',
             'Analytics dashboard',
@@ -73,10 +79,12 @@ PLANS = {
         'storage_gb': 100,
         'max_photos': 400000,
         'max_events': 150,
+        'max_upload_batch': 300,  # Max files per upload
         'features': [
             '100 GB storage',
             '400,000 photos',
             '150 events',
+            'Upload 300 photos at once',
             'Advanced face recognition',
             'Custom watermarks',
             'Analytics dashboard',
@@ -92,10 +100,12 @@ PLANS = {
         'storage_gb': 300,
         'max_photos': 1000000,
         'max_events': 500,
+        'max_upload_batch': 500,  # Max files per upload
         'features': [
             '300 GB storage',
             '1,000,000 photos',
             '500 events',
+            'Upload 500 photos at once',
             'Advanced face recognition',
             'Custom watermarks',
             'Analytics dashboard',
@@ -112,10 +122,12 @@ PLANS = {
         'storage_gb': -1,  # Unlimited
         'max_photos': -1,  # Unlimited
         'max_events': -1,  # Unlimited
+        'max_upload_batch': 1000,  # Max files per upload
         'features': [
             'Unlimited storage',
             'Unlimited photos',
             'Unlimited events',
+            'Upload 1000+ photos at once',
             'Advanced face recognition',
             'Custom watermarks',
             'Advanced analytics',
@@ -243,6 +255,23 @@ class PricingManager:
         # Check limits
         max_photos = plan_details['max_photos']
         max_storage_gb = plan_details['storage_gb']
+        max_upload_batch = plan_details.get('max_upload_batch', 50)  # Default to 50
+        
+        # Check batch size limit
+        if photo_count > max_upload_batch:
+            return {
+                'allowed': False,
+                'reason': f'Upload batch limit exceeded. Your plan allows uploading {max_upload_batch} photos at once. You selected {photo_count} photos. Please upgrade or upload in smaller batches.',
+                'current_usage': {
+                    'photos': photos_used,
+                    'storage_gb': storage_used_gb
+                },
+                'limits': {
+                    'photos': max_photos,
+                    'storage_gb': max_storage_gb,
+                    'batch_size': max_upload_batch
+                }
+            }
         
         # Unlimited plan (-1)
         if max_photos == -1 and max_storage_gb == -1:
@@ -255,7 +284,8 @@ class PricingManager:
                 },
                 'limits': {
                     'photos': 'unlimited',
-                    'storage_gb': 'unlimited'
+                    'storage_gb': 'unlimited',
+                    'batch_size': max_upload_batch
                 }
             }
         
@@ -270,7 +300,8 @@ class PricingManager:
                 },
                 'limits': {
                     'photos': max_photos,
-                    'storage_gb': max_storage_gb
+                    'storage_gb': max_storage_gb,
+                    'batch_size': max_upload_batch
                 }
             }
         
@@ -285,7 +316,8 @@ class PricingManager:
                 },
                 'limits': {
                     'photos': max_photos,
-                    'storage_gb': max_storage_gb
+                    'storage_gb': max_storage_gb,
+                    'batch_size': max_upload_batch
                 }
             }
         
@@ -299,7 +331,8 @@ class PricingManager:
             },
             'limits': {
                 'photos': max_photos,
-                'storage_gb': max_storage_gb
+                'storage_gb': max_storage_gb,
+                'batch_size': max_upload_batch
             }
         }
     
