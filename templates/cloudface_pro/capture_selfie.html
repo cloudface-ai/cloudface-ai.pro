@@ -301,7 +301,7 @@
         formData.append('selfie', capturedBlob, 'selfie.jpg');
         
         try {
-            const response = await fetch('/guest/capture-selfie/{{ event.event_id }}', {
+            const response = await fetch('/guest/capture-selfie', {
                 method: 'POST',
                 body: formData
             });
