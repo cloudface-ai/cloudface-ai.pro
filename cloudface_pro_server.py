@@ -445,6 +445,7 @@ def index():
 def admin_dashboard():
     """Admin dashboard - shows user's events"""
     user_id = session.get('user_id')
+    user_email = session.get('user_email')  # Get email for subscription lookup
     
     try:
         # Get user events
@@ -480,8 +481,13 @@ def admin_dashboard():
         'total_storage_gb': total_storage_gb
     }
     
-    # Get subscription info
-    subscription = pricing_manager.get_user_subscription(user_id)
+    # Get subscription info (use email, not user_id)
+    subscription = pricing_manager.get_user_subscription(user_email)
+    
+    # Debug: Print subscription details
+    print(f"🔍 DEBUG Dashboard for user: {user_email}")
+    print(f"🔍 Subscription plan: {subscription.get('plan')}")
+    print(f"🔍 Plan name: {subscription.get('plan_details', {}).get('name')}")
     
     return render_template('cloudface_pro/dashboard.html',
                           events=events,
@@ -577,6 +583,7 @@ def upload_photos(event_id):
     if request.method == 'POST':
         try:
             user_id = session.get('user_id')
+            user_email = session.get('user_email')  # Get email for subscription lookup
             
             # Handle photo uploads
             files = request.files.getlist('photos')
@@ -600,8 +607,8 @@ def upload_photos(event_id):
             if not photo_files:
                 return jsonify({'error': 'No valid files found'}), 400
             
-            # Check plan limits
-            limit_check = pricing_manager.check_can_upload(user_id, len(photo_files), total_size)
+            # Check plan limits (use email, not user_id)
+            limit_check = pricing_manager.check_can_upload(user_email, len(photo_files), total_size)
             
             if not limit_check['allowed']:
                 return jsonify({
@@ -642,8 +649,8 @@ def upload_photos(event_id):
             )
             processing_thread.start()
             
-            # Update usage stats
-            pricing_manager.increment_usage(user_id, saved_count, total_size)
+            # Update usage stats (use email, not user_id)
+            pricing_manager.increment_usage(user_email, saved_count, total_size)
             
             return jsonify({
                 'success': True,
