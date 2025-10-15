@@ -72,8 +72,10 @@ def owns_event_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # First check admin login
-        if not session.get('user_id'):
-            return redirect('/login')
+        user_id = session.get('user_id')
+        if not user_id:
+            print(f"⚠️ owns_event_required: No user_id in session, redirecting to login")
+            return redirect('/admin/login')
         
         # Get event_id from kwargs or args
         event_id = kwargs.get('event_id') or (args[0] if args else None)
@@ -81,10 +83,17 @@ def owns_event_required(f):
         if event_id:
             event = event_manager.get_event(event_id)
             if not event:
+                print(f"⚠️ owns_event_required: Event {event_id} not found")
                 return "Event not found", 404
             
             # Check if user owns this event
-            if event.get('user_id') != session.get('user_id'):
+            event_user_id = event.get('user_id')
+            print(f"🔍 owns_event_required: Checking access for event {event_id}")
+            print(f"🔍 Event user_id: {event_user_id}")
+            print(f"🔍 Session user_id: {user_id}")
+            
+            if event_user_id != user_id:
+                print(f"⚠️ Access denied: Event owner {event_user_id} != logged in user {user_id}")
                 return "Access Denied: You don't have permission to access this event", 403
         
         return f(*args, **kwargs)
