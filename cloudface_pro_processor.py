@@ -155,7 +155,7 @@ class CloudFaceProProcessor:
             event_manager.update_event(event_id, {'status': 'processing'})
             
             # Process photos in smaller batches to avoid memory issues
-            batch_size = 10  # Process 10 photos at a time
+            batch_size = 5  # Process 5 photos at a time (reduced for stability)
             total_stats = {
                 'total_photos': len(photo_files),
                 'processed': 0,
@@ -179,7 +179,7 @@ class CloudFaceProProcessor:
                     
                     # Small delay to prevent overwhelming the system
                     import time
-                    time.sleep(0.1)
+                    time.sleep(0.5)  # Increased delay for stability
                     
                 except Exception as e:
                     print(f"⚠️ Error processing batch: {e}")
