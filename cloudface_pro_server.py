@@ -679,39 +679,51 @@ def upload_photos(event_id):
                     'upgrade_url': '/admin/pricing'
                 }), 403
             
-            # Save photos immediately with better memory management
+            # Save photos in smaller batches to prevent memory overload
             saved_count = 0
             saved_files = []
+            upload_batch_size = 15  # Process 15 photos at a time during upload
             
-            for filename, file_obj in photo_files:
-                try:
-                    file_obj.seek(0)
-                    
-                    # Check file size to prevent memory issues
-                    file_size = len(file_obj.read())
-                    file_obj.seek(0)
-                    
-                    if file_size > 50 * 1024 * 1024:  # 50MB limit per file
-                        print(f"⚠️ Skipping large file {filename} ({file_size/1024/1024:.1f}MB)")
+            print(f"🔄 Processing {len(photo_files)} photos in batches of {upload_batch_size}")
+            
+            for i in range(0, len(photo_files), upload_batch_size):
+                batch = photo_files[i:i + upload_batch_size]
+                print(f"🔄 Processing upload batch {i//upload_batch_size + 1}/{(len(photo_files) + upload_batch_size - 1)//upload_batch_size}")
+                
+                for filename, file_obj in batch:
+                    try:
+                        file_obj.seek(0)
+                        
+                        # Check file size without loading entire file into memory
+                        file_obj.seek(0, 2)  # Seek to end
+                        file_size = file_obj.tell()
+                        file_obj.seek(0)  # Reset to beginning
+                        
+                        if file_size > 50 * 1024 * 1024:  # 50MB limit per file
+                            print(f"⚠️ Skipping large file {filename} ({file_size/1024/1024:.1f}MB)")
+                            continue
+                        
+                        if file_size == 0:
+                            print(f"⚠️ Skipping empty file {filename}")
+                            continue
+                        
+                        # Read the file content to memory (only once)
+                        file_content = file_obj.read()
+                        
+                        # Save to storage
+                        storage.save_event_photo(event_id, filename, BytesIO(file_content))
+                        saved_count += 1
+                        
+                        # Store for background processing (create new BytesIO to avoid memory issues)
+                        saved_files.append((filename, BytesIO(file_content)))
+                        
+                    except Exception as e:
+                        print(f"⚠️ Error saving {filename}: {e}")
                         continue
-                    
-                    if file_size == 0:
-                        print(f"⚠️ Skipping empty file {filename}")
-                        continue
-                    
-                    # Read the file content to memory
-                    file_content = file_obj.read()
-                    
-                    # Save to storage
-                    storage.save_event_photo(event_id, filename, BytesIO(file_content))
-                    saved_count += 1
-                    
-                    # Store for background processing (create new BytesIO to avoid memory issues)
-                    saved_files.append((filename, BytesIO(file_content)))
-                    
-                except Exception as e:
-                    print(f"⚠️ Error saving {filename}: {e}")
-                    continue
+                
+                # Small delay between batches to prevent overwhelming the system
+                import time
+                time.sleep(0.2)
             
             if saved_count == 0:
                 return jsonify({
