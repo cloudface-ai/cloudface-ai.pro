@@ -102,15 +102,16 @@ function handleFiles(fileList) {
 }
 
 uploadBtn.onclick = async () => {
-    console.log('Upload button clicked');
-    console.log('Files selected:', files.length);
+    console.log('🚨 UPLOAD BUTTON CLICKED!');
+    console.log('📁 Files selected:', files.length);
     
     if (files.length === 0) {
-        console.log('No files selected');
+        alert('No files selected');
         return;
     }
     
-    console.log('Starting upload process...');
+    console.log('🚀 Starting upload process...');
+    alert('Upload starting - check console for details');
     uploadBtn.disabled = true;
     progress.style.display = 'block';
     dropZone.style.display = 'none';
@@ -122,8 +123,10 @@ uploadBtn.onclick = async () => {
 
 // New batched upload function
 async function uploadInBatches(files, batchSize = 20) {
+    console.log('🔄 Starting batch upload function');
     const totalBatches = Math.ceil(files.length / batchSize);
     let uploadedCount = 0;
+    console.log(`📊 Total batches: ${totalBatches}, Batch size: ${batchSize}`);
     
     for (let i = 0; i < files.length; i += batchSize) {
         const batch = files.slice(i, i + batchSize);
