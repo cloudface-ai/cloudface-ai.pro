@@ -645,6 +645,9 @@ def upload_photos(event_id):
     """Upload photos to event"""
     if request.method == 'POST':
         try:
+            # Refresh session to prevent timeout during long uploads
+            session.permanent = True
+            
             user_id = session.get('user_id')
             user_email = session.get('user_email')  # Get email for subscription lookup
             
@@ -842,6 +845,16 @@ def upload_progress(event_id):
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/session/check')
+@login_required
+def check_session():
+    """Check if session is still valid"""
+    return jsonify({
+        'valid': True,
+        'user_id': session.get('user_id'),
+        'user_email': session.get('user_email')
+    })
 
 @app.route('/admin/events/<event_id>')
 @app.route('/events/<event_id>')  # Backward compatibility
