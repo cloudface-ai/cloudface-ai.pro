@@ -727,7 +727,53 @@ def upload_photos(event_id):
                     print(f"⚠️ Error saving {filename}: {e}")
                     continue
             
-            # Don't start processing automatically - let user click "Process Photos" button
+            # Start background processing after all files are saved
+            print(f"🔄 Starting background processing for {saved_count} photos...")
+            import threading
+            
+            def process_photos_background():
+                try:
+                    # Get all photos from storage for processing
+                    photos = storage.list_event_photos(event_id)
+                    print(f"🔄 Background processing: {len(photos)} photos")
+                    
+                    # Process in small batches
+                    batch_size = 5
+                    for i in range(0, len(photos), batch_size):
+                        batch_photos = photos[i:i + batch_size]
+                        print(f"🔄 Processing batch {i//batch_size + 1}/{(len(photos) + batch_size - 1)//batch_size}")
+                        
+                        # Process each photo in batch
+                        for photo_name in batch_photos:
+                            try:
+                                # Load photo from storage
+                                photo_path = storage.get_event_photo_path(event_id, photo_name)
+                                if os.path.exists(photo_path):
+                                    with open(photo_path, 'rb') as f:
+                                        image_bytes = f.read()
+                                    
+                                    # Process with face recognition
+                                    image = processor._bytes_to_image(image_bytes)
+                                    if image is not None:
+                                        face_results = processor.engine.detect_and_embed_faces(image)
+                                        print(f"  📸 {photo_name}: {len(face_results)} faces found")
+                                    
+                            except Exception as e:
+                                print(f"⚠️ Error processing {photo_name}: {e}")
+                        
+                        # Small delay between batches
+                        import time
+                        time.sleep(1)
+                    
+                    print(f"✅ Background processing complete for {len(photos)} photos")
+                    
+                except Exception as e:
+                    print(f"❌ Background processing failed: {e}")
+            
+            # Start background thread
+            processing_thread = threading.Thread(target=process_photos_background, daemon=True)
+            processing_thread.start()
+            
             print(f"✅ Uploaded {saved_count} photos successfully")
             
             if saved_count == 0:
