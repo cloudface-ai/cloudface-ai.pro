@@ -682,7 +682,7 @@ def upload_photos(event_id):
             # Save photos in smaller batches to prevent memory overload
             saved_count = 0
             saved_files = []
-            upload_batch_size = 15  # Process 15 photos at a time during upload
+            upload_batch_size = 5  # Process 5 photos at a time during upload (very conservative)
             
             print(f"🔄 Processing {len(photo_files)} photos in batches of {upload_batch_size}")
             
@@ -692,6 +692,7 @@ def upload_photos(event_id):
                 
                 for filename, file_obj in batch:
                     try:
+                        print(f"  📸 Processing {filename}")
                         file_obj.seek(0)
                         
                         # Check file size without loading entire file into memory
@@ -708,11 +709,15 @@ def upload_photos(event_id):
                             continue
                         
                         # Read the file content to memory (only once)
+                        print(f"    📖 Reading file content...")
                         file_content = file_obj.read()
+                        print(f"    💾 File size: {len(file_content)/1024/1024:.1f}MB")
                         
                         # Save to storage
+                        print(f"    💿 Saving to storage...")
                         storage.save_event_photo(event_id, filename, BytesIO(file_content))
                         saved_count += 1
+                        print(f"    ✅ Saved {filename}")
                         
                         # Store for background processing (create new BytesIO to avoid memory issues)
                         saved_files.append((filename, BytesIO(file_content)))
@@ -723,7 +728,8 @@ def upload_photos(event_id):
                 
                 # Small delay between batches to prevent overwhelming the system
                 import time
-                time.sleep(0.2)
+                time.sleep(0.5)  # Increased delay for stability
+                print(f"✅ Completed batch {i//upload_batch_size + 1}")
             
             if saved_count == 0:
                 return jsonify({
