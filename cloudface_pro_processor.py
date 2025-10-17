@@ -147,15 +147,43 @@ class CloudFaceProProcessor:
         return generated_count
     
     def process_event_photos_background(self, event_id: str, photo_files: List[tuple]):
-        """Process photos in background thread"""
+        """Process photos in background thread with better memory management"""
         print(f"🔄 Starting background processing for event {event_id}")
         
         try:
             # Update event status to processing
             event_manager.update_event(event_id, {'status': 'processing'})
             
-            # Process photos (same logic as before but in background)
-            stats = self.process_event_photos(event_id, photo_files)
+            # Process photos in smaller batches to avoid memory issues
+            batch_size = 10  # Process 10 photos at a time
+            total_stats = {
+                'total_photos': len(photo_files),
+                'processed': 0,
+                'faces_found': 0,
+                'errors': 0,
+                'face_embeddings': []
+            }
+            
+            for i in range(0, len(photo_files), batch_size):
+                batch = photo_files[i:i + batch_size]
+                print(f"🔄 Processing batch {i//batch_size + 1}/{(len(photo_files) + batch_size - 1)//batch_size}")
+                
+                try:
+                    batch_stats = self.process_event_photos(event_id, batch)
+                    
+                    # Merge stats
+                    total_stats['processed'] += batch_stats.get('processed', 0)
+                    total_stats['faces_found'] += batch_stats.get('faces_found', 0)
+                    total_stats['errors'] += batch_stats.get('errors', 0)
+                    total_stats['face_embeddings'].extend(batch_stats.get('face_embeddings', []))
+                    
+                    # Small delay to prevent overwhelming the system
+                    import time
+                    time.sleep(0.1)
+                    
+                except Exception as e:
+                    print(f"⚠️ Error processing batch: {e}")
+                    total_stats['errors'] += len(batch)
             
             # Mark as complete
             event_manager.update_event(event_id, {'status': 'ready'})
@@ -170,10 +198,10 @@ class CloudFaceProProcessor:
                 
                 # Create a JSON-safe version of stats (remove face_embeddings as they're large)
                 safe_stats = {
-                    'total_photos': stats.get('total_photos', 0),
-                    'processed': stats.get('processed', 0),
-                    'faces_found': stats.get('faces_found', 0),
-                    'errors': stats.get('errors', 0)
+                    'total_photos': total_stats.get('total_photos', 0),
+                    'processed': total_stats.get('processed', 0),
+                    'faces_found': total_stats.get('faces_found', 0),
+                    'errors': total_stats.get('errors', 0)
                 }
                 
                 with open(completion_file, 'w') as f:

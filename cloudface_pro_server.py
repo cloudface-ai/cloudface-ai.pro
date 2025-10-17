@@ -17,6 +17,7 @@ from cloudface_pro_email import email_service
 from datetime import datetime
 from io import BytesIO
 import os
+TESTING_MODE = os.environ.get('TESTING_MODE', 'true').lower() == 'true'
 from functools import wraps
 
 app = Flask(__name__)
@@ -655,13 +656,26 @@ def upload_photos(event_id):
                     'upgrade_url': '/admin/pricing'
                 }), 403
             
-            # Save photos immediately and generate thumbnails
+            # Save photos immediately with better memory management
             saved_count = 0
             saved_files = []
             
             for filename, file_obj in photo_files:
                 try:
                     file_obj.seek(0)
+                    
+                    # Check file size to prevent memory issues
+                    file_size = len(file_obj.read())
+                    file_obj.seek(0)
+                    
+                    if file_size > 50 * 1024 * 1024:  # 50MB limit per file
+                        print(f"⚠️ Skipping large file {filename} ({file_size/1024/1024:.1f}MB)")
+                        continue
+                    
+                    if file_size == 0:
+                        print(f"⚠️ Skipping empty file {filename}")
+                        continue
+                    
                     # Read the file content to memory
                     file_content = file_obj.read()
                     
@@ -669,24 +683,39 @@ def upload_photos(event_id):
                     storage.save_event_photo(event_id, filename, BytesIO(file_content))
                     saved_count += 1
                     
-                    # Store for background processing
+                    # Store for background processing (create new BytesIO to avoid memory issues)
                     saved_files.append((filename, BytesIO(file_content)))
                     
                 except Exception as e:
                     print(f"⚠️ Error saving {filename}: {e}")
+                    continue
+            
+            if saved_count == 0:
+                return jsonify({
+                    'error': 'No valid photos could be saved'
+                }), 400
             
             # Generate thumbnails immediately (fast operation)
-            thumbnail_count = processor.generate_thumbnails_only(event_id, saved_files)
-            print(f"✅ Generated {thumbnail_count} thumbnails immediately")
+            try:
+                thumbnail_count = processor.generate_thumbnails_only(event_id, saved_files)
+                print(f"✅ Generated {thumbnail_count} thumbnails immediately")
+            except Exception as e:
+                print(f"⚠️ Thumbnail generation failed: {e}")
+                # Continue anyway - thumbnails are not critical
             
             # Start background processing for face detection only
-            import threading
-            processing_thread = threading.Thread(
-                target=processor.process_event_photos_background,
-                args=(event_id, saved_files),
-                daemon=True
-            )
-            processing_thread.start()
+            try:
+                import threading
+                processing_thread = threading.Thread(
+                    target=processor.process_event_photos_background,
+                    args=(event_id, saved_files),
+                    daemon=True
+                )
+                processing_thread.start()
+                print(f"🔄 Started background processing for {saved_count} photos")
+            except Exception as e:
+                print(f"⚠️ Failed to start background processing: {e}")
+                # Continue anyway - photos are saved
             
             # Update usage stats (use email, not user_id)
             pricing_manager.increment_usage(user_email, saved_count, total_size)
@@ -745,6 +774,33 @@ def check_processing_status(event_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/events/<event_id>/upload-progress')
+@owns_event_required
+def upload_progress(event_id):
+    """Get upload progress for large batches"""
+    try:
+        # Count photos in storage
+        event_path = f'storage/cloudface_pro/events/{event_id}/photos'
+        if os.path.exists(event_path):
+            photo_count = len([f for f in os.listdir(event_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.heic'))])
+            
+            return jsonify({
+                'success': True,
+                'photos_uploaded': photo_count,
+                'status': 'uploading' if photo_count > 0 else 'pending'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'photos_uploaded': 0,
+                'status': 'pending'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/admin/events/<event_id>')
 @app.route('/events/<event_id>')  # Backward compatibility
