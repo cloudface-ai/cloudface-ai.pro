@@ -640,9 +640,18 @@ def admin_create_event():
     return render_template('cloudface_pro/create_event.html')
 
 @app.route('/events/<event_id>/upload', methods=['GET', 'POST'])
-@owns_event_required
 def upload_photos(event_id):
     """Upload photos to event"""
+    # Check authentication manually to avoid redirect issues
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    # Check if user owns event
+    event = event_manager.get_event(event_id)
+    if not event or event.user_id != user_id:
+        return jsonify({'error': 'Event not found or access denied'}), 403
+    
     if request.method == 'POST':
         try:
             # Refresh session to prevent timeout during long uploads

@@ -160,7 +160,13 @@ uploadBtn.onclick = async () => {
         console.log('Response received:', res.status, res.statusText);
         
         if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            if (res.status === 401) {
+                throw new Error('Session expired. Please login again.');
+            } else if (res.status === 403) {
+                throw new Error('Access denied to this event.');
+            } else {
+                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
         }
         
         clearInterval(interval);
