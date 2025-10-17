@@ -507,10 +507,33 @@ def admin_dashboard():
         print(f"⚠️  Error loading events: {e}")
         events = []
     
-    # Calculate user stats from events
+    # Calculate user stats from events - count actual photos, not just stats
     total_events = len(events)
-    total_photos = sum(event.get('stats', {}).get('total_photos', 0) for event in events)
+    total_photos = 0
     total_searches = sum(event.get('stats', {}).get('total_searches', 0) for event in events)
+    total_storage_bytes = 0
+    
+    # Count actual photos from storage for accurate count
+    for event in events:
+        try:
+            photos = storage.list_event_photos(event['event_id'])
+            actual_photo_count = len(photos)
+            total_photos += actual_photo_count
+            
+            # Update event stats if they're wrong
+            stored_photo_count = event.get('stats', {}).get('total_photos', 0)
+            if actual_photo_count != stored_photo_count:
+                print(f"🔄 Updating event {event['event_id']} stats: {stored_photo_count} -> {actual_photo_count} photos")
+                event_manager.update_event(event['event_id'], {
+                    'stats.total_photos': actual_photo_count
+                })
+                
+        except Exception as e:
+            print(f"⚠️ Error counting photos for event {event['event_id']}: {e}")
+            # Fall back to stored stats
+            total_photos += event.get('stats', {}).get('total_photos', 0)
+    
+    # Calculate storage size
     total_storage_bytes = sum(event.get('stats', {}).get('storage_bytes', 0) for event in events)
     total_storage_gb = total_storage_bytes / (1024 * 1024 * 1024)  # Convert to GB
     
