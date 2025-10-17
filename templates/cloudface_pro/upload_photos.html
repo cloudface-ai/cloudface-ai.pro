@@ -188,6 +188,8 @@ uploadBtn.onclick = async () => {
         clearInterval(interval);
         clearInterval(sessionCheckInterval);
         console.error('Upload error:', err);
+        console.error('Error name:', err.name);
+        console.error('Error stack:', err.stack);
         alert(`Upload failed: ${err.message}\n\nCheck browser console for details.`);
         
         // Show error details
@@ -201,7 +203,8 @@ uploadBtn.onclick = async () => {
             alert('Upload too large. Try uploading fewer photos at once.');
         }
         
-        location.reload();
+        // Don't reload automatically - let user see the error
+        console.log('Upload failed, not reloading page');
     }
 };
 
