@@ -147,15 +147,26 @@ uploadBtn.onclick = async () => {
     }, 10000); // Check every 10 seconds
     
     try {
-        console.log('Sending POST request to:', '/events/{{ event.event_id }}/upload');
-        console.log('FormData entries:', Array.from(formData.entries()).map(([key, value]) => `${key}: ${value.name || value}`));
+        console.log('🚀 Starting upload process...');
+        console.log('📡 Sending POST request to:', '/events/{{ event.event_id }}/upload');
+        console.log('📁 FormData entries:', Array.from(formData.entries()).map(([key, value]) => `${key}: ${value.name || value}`));
+        console.log('🔍 FormData size:', formData.get('photos').length, 'files');
         
+        // Test if fetch is working at all
+        console.log('🧪 Testing basic fetch...');
+        const testResponse = await fetch('/api/session/check');
+        console.log('✅ Basic fetch works:', testResponse.status);
+        
+        console.log('📤 Now sending actual upload request...');
         const res = await fetch('/events/{{ event.event_id }}/upload', {
             method: 'POST',
-            body: formData,
-            // Increase timeout for large uploads
-            signal: AbortSignal.timeout(300000) // 5 minutes timeout
+            body: formData
+        }).catch(fetchError => {
+            console.error('❌ Fetch failed completely:', fetchError);
+            throw fetchError;
         });
+        
+        console.log('✅ Upload request sent successfully, got response:', res.status);
         
         console.log('Response received:', res.status, res.statusText);
         
