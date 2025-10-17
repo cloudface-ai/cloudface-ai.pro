@@ -116,114 +116,73 @@ uploadBtn.onclick = async () => {
     dropZone.style.display = 'none';
     fileInfo.style.display = 'none';
     
-    const formData = new FormData();
-    files.forEach(f => formData.append('photos', f));
+    // Upload in batches to prevent freezing
+    await uploadInBatches(files, 20);
+};
+
+// New batched upload function
+async function uploadInBatches(files, batchSize = 20) {
+    const totalBatches = Math.ceil(files.length / batchSize);
+    let uploadedCount = 0;
     
-    let prog = 0;
-    const interval = setInterval(() => {
-        prog += 10;
-        if (prog <= 90) {
-            progressBar.style.width = prog + '%';
-            progressText.textContent = 'Uploading photos...';
-        }
-    }, 200);
-    
-    // Check session periodically during upload
-    const sessionCheckInterval = setInterval(async () => {
+    for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+        const batchNumber = Math.floor(i / batchSize) + 1;
+        
+        console.log(`Uploading batch ${batchNumber}/${totalBatches} (${batch.length} files)`);
+        progressText.textContent = `Uploading batch ${batchNumber}/${totalBatches}...`;
+        
+        // Create FormData for this batch
+        const formData = new FormData();
+        batch.forEach(f => formData.append('photos', f));
+        
         try {
-            const response = await fetch('/api/session/check');
-            if (!response.ok) {
-                clearInterval(sessionCheckInterval);
-                throw new Error('Session expired during upload');
-            }
-        } catch (error) {
-            clearInterval(interval);
-            clearInterval(sessionCheckInterval);
-            console.error('Session check failed:', error);
-            alert('Session expired during upload. Please login again.');
-            location.reload();
-            return;
-        }
-    }, 10000); // Check every 10 seconds
-    
-    try {
-        console.log('🚀 Starting upload process...');
-        console.log('📡 Sending POST request to:', '/events/{{ event.event_id }}/upload');
-        console.log('📁 FormData entries:', Array.from(formData.entries()).map(([key, value]) => `${key}: ${value.name || value}`));
-        console.log('🔍 FormData size:', formData.get('photos').length, 'files');
-        
-        // Test if fetch is working at all
-        console.log('🧪 Testing basic fetch...');
-        const testResponse = await fetch('/api/session/check');
-        console.log('✅ Basic fetch works:', testResponse.status);
-        
-        console.log('📤 Now sending actual upload request...');
-        const res = await fetch('/events/{{ event.event_id }}/upload', {
-            method: 'POST',
-            body: formData
-        }).catch(fetchError => {
-            console.error('❌ Fetch failed completely:', fetchError);
-            throw fetchError;
-        });
-        
-        console.log('✅ Upload request sent successfully, got response:', res.status);
-        
-        console.log('Response received:', res.status, res.statusText);
-        
-        if (!res.ok) {
-            if (res.status === 401) {
-                throw new Error('Session expired. Please login again.');
-            } else if (res.status === 403) {
-                throw new Error('Access denied to this event.');
-            } else {
+            // Upload this batch
+            const res = await fetch('/events/{{ event.event_id }}/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!res.ok) {
                 throw new Error(`HTTP ${res.status}: ${res.statusText}`);
             }
-        }
-        
-        clearInterval(interval);
-        clearInterval(sessionCheckInterval);
-        
-        console.log('Parsing response JSON...');
-        const data = await res.json();
-        console.log('Response data:', data);
-        
-        if (data.success) {
-            progressBar.style.width = '100%';
-            progressBar.style.background = '#10B981';
-            progressText.textContent = data.message;
             
-            // Show processing status
-            setTimeout(() => {
-                progress.style.display = 'none';
-                document.getElementById('processingStatus').style.display = 'block';
-                
-                // Start checking for completion
-                checkProcessingComplete();
-            }, 1000);
+            const data = await res.json();
+            uploadedCount += batch.length;
+            
+            // Update progress
+            const totalProgress = Math.min(90, (uploadedCount / files.length) * 90);
+            progressBar.style.width = totalProgress + '%';
+            
+            console.log(`✅ Batch ${batchNumber} uploaded successfully (${data.message})`);
+            
+            // Small delay between batches to prevent overwhelming the server
+            if (i + batchSize < files.length) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+        } catch (error) {
+            console.error(`❌ Batch ${batchNumber} failed:`, error);
+            alert(`Upload failed at batch ${batchNumber}. Please try again.`);
+            return;
         }
-    } catch (err) {
-        clearInterval(interval);
-        clearInterval(sessionCheckInterval);
-        console.error('Upload error:', err);
-        console.error('Error name:', err.name);
-        console.error('Error stack:', err.stack);
-        alert(`Upload failed: ${err.message}\n\nCheck browser console for details.`);
-        
-        // Show error details
-        if (err.name === 'TimeoutError') {
-            alert('Upload timed out after 5 minutes. Try uploading fewer photos at once.');
-        } else if (err.name === 'AbortError') {
-            alert('Upload was cancelled. Try again.');
-        } else if (err.message.includes('HTTP 302')) {
-            alert('Session expired during upload. Please login again.');
-        } else if (err.message.includes('HTTP 413')) {
-            alert('Upload too large. Try uploading fewer photos at once.');
-        }
-        
-        // Don't reload automatically - let user see the error
-        console.log('Upload failed, not reloading page');
     }
-};
+    
+    // All batches uploaded successfully
+    progressBar.style.width = '100%';
+    progressBar.style.background = '#10B981';
+    progressText.textContent = `All ${files.length} photos uploaded successfully!`;
+    
+    // Show processing status after a short delay
+    setTimeout(() => {
+        progress.style.display = 'none';
+        document.getElementById('processingStatus').style.display = 'block';
+        
+        // Start checking for completion
+        checkProcessingComplete();
+    }, 1000);
+}
+    
 
 function closePopup() {
     document.getElementById('popupNotification').style.display = 'none';

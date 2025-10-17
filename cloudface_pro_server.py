@@ -23,6 +23,9 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 
+# Configure Flask for better upload handling
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 MB max upload size
+
 # Session configuration for production (behind Cloudflare/Nginx)
 app.config['SESSION_COOKIE_SECURE'] = False  # Cloudflare handles HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
