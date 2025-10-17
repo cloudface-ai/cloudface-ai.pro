@@ -267,10 +267,20 @@ def guest_login():
             session['guest_email'] = result['email']
             session['guest_name'] = result['name']
             
-            return jsonify({
-                'success': True,
-                'redirect': '/guest/dashboard'
-            })
+            # Check if they came from an event page
+            last_event_id = session.get('last_event_id')
+            if last_event_id:
+                # Redirect back to the event they came from
+                return jsonify({
+                    'success': True,
+                    'redirect': f'/e/{last_event_id}'
+                })
+            else:
+                # No event context, go to dashboard
+                return jsonify({
+                    'success': True,
+                    'redirect': '/guest/dashboard'
+                })
         else:
             return jsonify({
                 'success': False,
@@ -298,10 +308,20 @@ def guest_signup():
             session['guest_email'] = result['email']
             session['guest_name'] = result['name']
             
-            return jsonify({
-                'success': True,
-                'redirect': '/guest/capture-selfie'
-            })
+            # Check if they came from an event page
+            last_event_id = session.get('last_event_id')
+            if last_event_id:
+                # Redirect back to the event they came from
+                return jsonify({
+                    'success': True,
+                    'redirect': f'/e/{last_event_id}'
+                })
+            else:
+                # No event context, go to selfie capture
+                return jsonify({
+                    'success': True,
+                    'redirect': '/guest/capture-selfie'
+                })
         else:
             return jsonify({
                 'success': False,
