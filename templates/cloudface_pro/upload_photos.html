@@ -122,7 +122,9 @@ uploadBtn.onclick = async () => {
     try {
         const res = await fetch('/events/{{ event.event_id }}/upload', {
             method: 'POST',
-            body: formData
+            body: formData,
+            // Increase timeout for large uploads
+            signal: AbortSignal.timeout(300000) // 5 minutes timeout
         });
         
         clearInterval(interval);
@@ -144,7 +146,16 @@ uploadBtn.onclick = async () => {
         }
     } catch (err) {
         clearInterval(interval);
-        alert(err.message);
+        console.error('Upload error:', err);
+        alert(`Upload failed: ${err.message}\n\nCheck browser console for details.`);
+        
+        // Show error details
+        if (err.name === 'TimeoutError') {
+            alert('Upload timed out. Try uploading fewer photos at once.');
+        } else if (err.name === 'AbortError') {
+            alert('Upload was cancelled. Try again.');
+        }
+        
         location.reload();
     }
 };
