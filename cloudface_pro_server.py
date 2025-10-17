@@ -649,8 +649,11 @@ def upload_photos(event_id):
     
     # Check if user owns event
     event = event_manager.get_event(event_id)
-    if not event or event.get('user_id') != user_id:
-        return jsonify({'error': 'Event not found or access denied'}), 403
+    print(f"🔍 Upload debug - user_id: {user_id}, event: {event}")
+    if not event:
+        return jsonify({'error': 'Event not found'}), 404
+    if event.get('user_id') != user_id:
+        return jsonify({'error': 'Access denied to this event'}), 403
     
     if request.method == 'POST':
         try:
