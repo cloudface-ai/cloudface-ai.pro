@@ -649,7 +649,7 @@ def upload_photos(event_id):
     
     # Check if user owns event
     event = event_manager.get_event(event_id)
-    if not event or event.user_id != user_id:
+    if not event or event.get('user_id') != user_id:
         return jsonify({'error': 'Event not found or access denied'}), 403
     
     if request.method == 'POST':
