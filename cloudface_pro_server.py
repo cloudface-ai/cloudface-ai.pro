@@ -24,10 +24,9 @@ app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 
 # Session configuration for production (behind Cloudflare/Nginx)
-app.config['SESSION_COOKIE_SECURE'] = True  # Required for HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False  # Cloudflare handles HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for cross-origin requests
-app.config['SESSION_COOKIE_DOMAIN'] = '.cloudface-ai.pro'  # Allow subdomain cookies
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # More compatible
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
 
 # Make config available to templates
@@ -683,84 +682,90 @@ def upload_photos(event_id):
                     'upgrade_url': '/admin/pricing'
                 }), 403
             
-            # Save photos in smaller batches to prevent memory overload
+            # Fast upload - save files quickly without processing (like WeTransfer)
             saved_count = 0
-            saved_files = []
-            upload_batch_size = 5  # Process 5 photos at a time during upload (very conservative)
             
-            print(f"🔄 Processing {len(photo_files)} photos in batches of {upload_batch_size}")
+            print(f"🚀 Fast upload: {len(photo_files)} photos")
             
-            for i in range(0, len(photo_files), upload_batch_size):
-                batch = photo_files[i:i + upload_batch_size]
-                print(f"🔄 Processing upload batch {i//upload_batch_size + 1}/{(len(photo_files) + upload_batch_size - 1)//upload_batch_size}")
-                
-                for filename, file_obj in batch:
-                    try:
-                        print(f"  📸 Processing {filename}")
-                        file_obj.seek(0)
-                        
-                        # Check file size without loading entire file into memory
-                        file_obj.seek(0, 2)  # Seek to end
-                        file_size = file_obj.tell()
-                        file_obj.seek(0)  # Reset to beginning
-                        
-                        if file_size > 50 * 1024 * 1024:  # 50MB limit per file
-                            print(f"⚠️ Skipping large file {filename} ({file_size/1024/1024:.1f}MB)")
-                            continue
-                        
-                        if file_size == 0:
-                            print(f"⚠️ Skipping empty file {filename}")
-                            continue
-                        
-                        # Read the file content to memory (only once)
-                        print(f"    📖 Reading file content...")
-                        file_content = file_obj.read()
-                        print(f"    💾 File size: {len(file_content)/1024/1024:.1f}MB")
-                        
-                        # Save to storage
-                        print(f"    💿 Saving to storage...")
-                        storage.save_event_photo(event_id, filename, BytesIO(file_content))
-                        saved_count += 1
-                        print(f"    ✅ Saved {filename}")
-                        
-                        # Store for background processing (create new BytesIO to avoid memory issues)
-                        saved_files.append((filename, BytesIO(file_content)))
-                        
-                    except Exception as e:
-                        print(f"⚠️ Error saving {filename}: {e}")
+            for filename, file_obj in photo_files:
+                try:
+                    file_obj.seek(0)
+                    
+                    # Check file size quickly
+                    file_obj.seek(0, 2)  # Seek to end
+                    file_size = file_obj.tell()
+                    file_obj.seek(0)  # Reset to beginning
+                    
+                    if file_size > 50 * 1024 * 1024:  # 50MB limit per file
+                        print(f"⚠️ Skipping large file {filename} ({file_size/1024/1024:.1f}MB)")
                         continue
-                
-                # Small delay between batches to prevent overwhelming the system
-                import time
-                time.sleep(0.5)  # Increased delay for stability
-                print(f"✅ Completed batch {i//upload_batch_size + 1}")
+                    
+                    if file_size == 0:
+                        print(f"⚠️ Skipping empty file {filename}")
+                        continue
+                    
+                    # Read file content
+                    file_content = file_obj.read()
+                    
+                    # Save to storage (fast operation)
+                    storage.save_event_photo(event_id, filename, BytesIO(file_content))
+                    saved_count += 1
+                    
+                except Exception as e:
+                    print(f"⚠️ Error saving {filename}: {e}")
+                    continue
+            
+            # Start background processing after all files are saved
+            print(f"🔄 Starting background processing for {saved_count} photos...")
+            import threading
+            
+            def process_photos_background():
+                try:
+                    # Get all photos from storage for processing
+                    photos = storage.list_event_photos(event_id)
+                    print(f"🔄 Background processing: {len(photos)} photos")
+                    
+                    # Process in small batches
+                    batch_size = 5
+                    for i in range(0, len(photos), batch_size):
+                        batch_photos = photos[i:i + batch_size]
+                        print(f"🔄 Processing batch {i//batch_size + 1}/{(len(photos) + batch_size - 1)//batch_size}")
+                        
+                        # Process each photo in batch
+                        for photo_name in batch_photos:
+                            try:
+                                # Load photo from storage
+                                photo_path = storage.get_event_photo_path(event_id, photo_name)
+                                if os.path.exists(photo_path):
+                                    with open(photo_path, 'rb') as f:
+                                        image_bytes = f.read()
+                                    
+                                    # Process with face recognition
+                                    image = processor._bytes_to_image(image_bytes)
+                                    if image is not None:
+                                        face_results = processor.engine.detect_and_embed_faces(image)
+                                        print(f"  📸 {photo_name}: {len(face_results)} faces found")
+                                    
+                            except Exception as e:
+                                print(f"⚠️ Error processing {photo_name}: {e}")
+                        
+                        # Small delay between batches
+                        import time
+                        time.sleep(1)
+                    
+                    print(f"✅ Background processing complete for {len(photos)} photos")
+                    
+                except Exception as e:
+                    print(f"❌ Background processing failed: {e}")
+            
+            # Start background thread
+            processing_thread = threading.Thread(target=process_photos_background, daemon=True)
+            processing_thread.start()
             
             if saved_count == 0:
                 return jsonify({
                     'error': 'No valid photos could be saved'
                 }), 400
-            
-            # Generate thumbnails immediately (fast operation)
-            try:
-                thumbnail_count = processor.generate_thumbnails_only(event_id, saved_files)
-                print(f"✅ Generated {thumbnail_count} thumbnails immediately")
-            except Exception as e:
-                print(f"⚠️ Thumbnail generation failed: {e}")
-                # Continue anyway - thumbnails are not critical
-            
-            # Start background processing for face detection only
-            try:
-                import threading
-                processing_thread = threading.Thread(
-                    target=processor.process_event_photos_background,
-                    args=(event_id, saved_files),
-                    daemon=True
-                )
-                processing_thread.start()
-                print(f"🔄 Started background processing for {saved_count} photos")
-            except Exception as e:
-                print(f"⚠️ Failed to start background processing: {e}")
-                # Continue anyway - photos are saved
             
             # Update usage stats (use email, not user_id)
             pricing_manager.increment_usage(user_email, saved_count, total_size)
