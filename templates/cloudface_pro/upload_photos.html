@@ -159,9 +159,16 @@ uploadBtn.onclick = async () => {
         
         console.log('Response received:', res.status, res.statusText);
         
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        
         clearInterval(interval);
         clearInterval(sessionCheckInterval);
+        
+        console.log('Parsing response JSON...');
         const data = await res.json();
+        console.log('Response data:', data);
         
         if (data.success) {
             progressBar.style.width = '100%';
@@ -185,9 +192,13 @@ uploadBtn.onclick = async () => {
         
         // Show error details
         if (err.name === 'TimeoutError') {
-            alert('Upload timed out. Try uploading fewer photos at once.');
+            alert('Upload timed out after 5 minutes. Try uploading fewer photos at once.');
         } else if (err.name === 'AbortError') {
             alert('Upload was cancelled. Try again.');
+        } else if (err.message.includes('HTTP 302')) {
+            alert('Session expired during upload. Please login again.');
+        } else if (err.message.includes('HTTP 413')) {
+            alert('Upload too large. Try uploading fewer photos at once.');
         }
         
         location.reload();
