@@ -24,9 +24,10 @@ app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 
 # Session configuration for production (behind Cloudflare/Nginx)
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True only if using HTTPS directly
+app.config['SESSION_COOKIE_SECURE'] = True  # Required for HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for cross-origin requests
+app.config['SESSION_COOKIE_DOMAIN'] = '.cloudface-ai.pro'  # Allow subdomain cookies
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
 
 # Make config available to templates
