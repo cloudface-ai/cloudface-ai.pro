@@ -41,12 +41,12 @@ PLANS = {
         'storage_gb': 10,
         'max_photos': 20000,
         'max_events': 10,
-        'max_upload_batch': 100,  # Max files per upload
+        'max_upload_batch': 200,  # Max files per upload
         'features': [
             '10 GB storage',
             '20,000 photos',
             '10 events',
-            'Upload 100 photos at once',
+            'Upload 200 photos at once',
             'Advanced face recognition',
             'Custom watermarks',
             'Email support'
