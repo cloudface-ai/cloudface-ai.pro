@@ -91,17 +91,26 @@ dropZone.ondrop = (e) => {
 fileInput.onchange = (e) => handleFiles(e.target.files);
 
 function handleFiles(fileList) {
+    console.log('Files selected:', fileList.length);
     files = Array.from(fileList);
     fileCount.textContent = files.length;
     fileInfo.style.display = 'block';
     uploadBtn.disabled = false;
     uploadBtn.style.opacity = '1';
     uploadBtn.style.cursor = 'pointer';
+    console.log('Upload button enabled, files ready:', files.length);
 }
 
 uploadBtn.onclick = async () => {
-    if (files.length === 0) return;
+    console.log('Upload button clicked');
+    console.log('Files selected:', files.length);
     
+    if (files.length === 0) {
+        console.log('No files selected');
+        return;
+    }
+    
+    console.log('Starting upload process...');
     uploadBtn.disabled = true;
     progress.style.display = 'block';
     dropZone.style.display = 'none';
@@ -138,12 +147,17 @@ uploadBtn.onclick = async () => {
     }, 10000); // Check every 10 seconds
     
     try {
+        console.log('Sending POST request to:', '/events/{{ event.event_id }}/upload');
+        console.log('FormData entries:', Array.from(formData.entries()).map(([key, value]) => `${key}: ${value.name || value}`));
+        
         const res = await fetch('/events/{{ event.event_id }}/upload', {
             method: 'POST',
             body: formData,
             // Increase timeout for large uploads
             signal: AbortSignal.timeout(300000) // 5 minutes timeout
         });
+        
+        console.log('Response received:', res.status, res.statusText);
         
         clearInterval(interval);
         clearInterval(sessionCheckInterval);
