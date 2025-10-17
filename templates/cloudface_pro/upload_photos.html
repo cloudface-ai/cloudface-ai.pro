@@ -58,6 +58,9 @@
 
 {% block scripts %}
 <script>
+console.log('🚨 JAVASCRIPT LOADED!');
+alert('JavaScript is working!');
+
 let files = [];
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
@@ -102,15 +105,16 @@ function handleFiles(fileList) {
 }
 
 uploadBtn.onclick = async () => {
-    console.log('Upload button clicked');
-    console.log('Files selected:', files.length);
+    console.log('🚨 UPLOAD BUTTON CLICKED!');
+    console.log('📁 Files selected:', files.length);
     
     if (files.length === 0) {
-        console.log('No files selected');
+        alert('No files selected');
         return;
     }
     
-    console.log('Starting upload process...');
+    console.log('🚀 Starting upload process...');
+    alert('Upload starting...');
     uploadBtn.disabled = true;
     progress.style.display = 'block';
     dropZone.style.display = 'none';
